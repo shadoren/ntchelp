@@ -18,10 +18,16 @@
             padding: 20px;
             border-radius: 5px;
             font-size: 24px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
 <body>
-    <div class="box">hello world</div>
+    <div class="box">Hello World!</div>
 </body>
 </html>
