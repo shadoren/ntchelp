@@ -1,0 +1,95 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+.header {
+    height: 54px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+}
+
+.content-box select {
+    margin-top: 20px;
+    text-align: center;
+    background: transparent;
+    border: 1px solid #ccc;
+    color: inherit;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+}
+
+.content-box {
+    padding: 30px;
+    max-width: 600px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+.content-box h1 {
+    margin-bottom: 10px;
+}
+
+.content-box p {
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.content-box h2 {
+    margin-bottom: 10px;
+}
+
+.content-box ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.content-box li {
+    margin-bottom: 5px;
+}
+
+.content-box img {
+    max-width: 200px;
+    display: block;
+    margin: 0 auto 10px;
+}
+
+.content-box a {
+    color: #007bff;
+}
+
+.content-box blockquote {
+    text-align: left;
+    margin-bottom: 40px;
+    font-style: italic;
+    border-left: 4px solid #ccc;
+    padding-left: 20px;
+}
+
+/* Index specific */
+.splash-body {
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.box {
+    padding: 80px;
+    border-radius: 20px;
+    font-size: 96px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.5); }
+    100% { transform: scale(1); }
+}

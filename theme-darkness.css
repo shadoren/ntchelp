@@ -1,0 +1,45 @@
+body {
+    background: #0a0a0a;
+    font-family: 'Courier New', monospace;
+}
+
+.header {
+    background: #0a0a0a;
+}
+
+.nav-link {
+    color: #00ff00;
+}
+
+.content-box {
+    background: #1a1a1a;
+    border-left: 4px solid #00ff00;
+    border-right: 4px solid #00ff00;
+    color: #cccccc;
+}
+
+.content-box h1 {
+    color: #00ff00;
+}
+
+.content-box h2 {
+    color: #00ff00;
+}
+
+.content-box a {
+    color: #00ff00;
+}
+
+.content-box blockquote {
+    border-left-color: #00ff00;
+}
+
+/* Index */
+.splash-body {
+    background: #0a0a0a;
+}
+
+.box {
+    background: #1a1a1a;
+    color: #00ff00;
+}
