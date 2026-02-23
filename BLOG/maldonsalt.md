@@ -3,7 +3,7 @@ layout: default
 title: Maldon's Sea Salt
 ---
 
-# Maldon's Sea Salt
+<h1 align="center">Maldon's Sea Salt</h1>
 
 ![Maldon's Sea Salt](https://m.media-amazon.com/images/I/51cwKas6OlL.jpg)
 
