@@ -19,7 +19,7 @@ Heather Carleton - Secretary
 **Phone:** 530-676-6055
 
 ## Backup Solution
-![Backblaze](https://www.backblaze.com/images/backblaze-logo.png)
+![Backblaze](backblaze.png)
 
 Everyone needs a proper backup service to protect their data from loss and/or theft. In most cases this service will cover your needs for a reasonable monthly/yearly price!
 
