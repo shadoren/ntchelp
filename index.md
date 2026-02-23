@@ -3,7 +3,7 @@ layout: default
 title: NTCHELP, INC.
 ---
 
-<p align="center"># NTCHELP, INC.</p>
+<h1 align="center">NTCHELP, INC.</h1>
 
 
 NTCHELP, INC. specializes in remote technical support and maintenance for businesses. Previously offering on-site services, we have transitioned to a fully remote model after relocating to Georgia. Our business support is designed for efficiency, with expedited service available exclusively to existing clients with an established relationship.
