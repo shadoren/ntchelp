@@ -27,4 +27,6 @@ nav {
   max-width: 500px; /* scales images */
   width: 80%;
   height: auto;
+  display: block;
+  margin: 0 auto;
 }
