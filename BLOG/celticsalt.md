@@ -3,7 +3,7 @@ layout: default
 title: Celtic Salt
 ---
 
-# Celtic Salt
+<h1 align="center">Celtic Salt</h1>
 
 ![Celtic Sea Salt](https://m.media-amazon.com/images/I/41JzEtFNSfL.jpg)
 
