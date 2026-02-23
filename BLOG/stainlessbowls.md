@@ -3,7 +3,7 @@ layout: default
 title: Stainless Steel Bowls
 ---
 
-# Stainless Steel Bowls
+<h1 align="center">Stainless Steel Bowls</h1>
 
 ![Stainless Steel Bowls](https://m.media-amazon.com/images/I/415m0Ipm+JL.jpg)
 
