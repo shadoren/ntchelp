@@ -5,7 +5,7 @@ title: NTCHELP, INC.
 
 # Welcome to the Blog!
 
-Read about Celtic Salt
+[Read about Celtic Salt](celticsalt.md)
 
 Read about Ubiquiti Dream Router 7
 
