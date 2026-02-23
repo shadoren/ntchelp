@@ -3,7 +3,7 @@ layout: default
 title: Ubiquiti Dream Router 7
 ---
 
-# Ubiquiti Dream Router 7
+<h1 align="center">Ubiquiti Dream Router 7</h1>
 
 <div class="content-box">
   <a href="https://amzn.to/49n5LR5"> <img src="https://cdn.ecomm.ui.com/products/60459473-c989-41db-93f2-3c0f40df84f3/b4fd2ae0-8d83-4ad0-ab4e-138d034a32f3.png" alt="Ubiquiti Dream Router 7">
