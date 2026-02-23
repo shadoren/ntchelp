@@ -6,7 +6,8 @@ title: Ubiquiti Dream Router 7
 # Ubiquiti Dream Router 7
 
 <div class="content-box">
-  <img src="https://cdn.ecomm.ui.com/products/60459473-c989-41db-93f2-3c0f40df84f3/b4fd2ae0-8d83-4ad0-ab4e-138d034a32f3.png" alt="Ubiquiti Dream Router 7">
+  <a href="https://amzn.to/49n5LR5"> <img src="https://cdn.ecomm.ui.com/products/60459473-c989-41db-93f2-3c0f40df84f3/b4fd2ae0-8d83-4ad0-ab4e-138d034a32f3.png" alt="Ubiquiti Dream Router 7">
+  </a>
 </div>
 
 Ubiquiti Networks offers excellent solutions for small and medium businesses with their advanced software and cost-effective licensing. The Dream Router 7 provides powerful routing capabilities at a fair price.
