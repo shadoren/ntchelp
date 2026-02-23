@@ -1,4 +1,4 @@
-# Celtic Salt - NTCHELP Blog
+# Celtic Salt
 
 ![Celtic Sea Salt](https://m.media-amazon.com/images/I/41JzEtFNSfL.jpg)
 
