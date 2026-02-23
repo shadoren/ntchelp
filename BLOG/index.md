@@ -3,7 +3,7 @@ layout: default
 title: NTCHELP, INC.
 ---
 
-# Welcome to the Blog!
+<h1 align="center">Welcome to the Blog!</h1>
 
 [Read about Celtic Salt](celticsalt.md)
 
