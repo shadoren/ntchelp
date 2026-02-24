@@ -8,6 +8,9 @@ tags: ["security", "cameras", "poe", "surveillance"]
 
 <h1 align="center">Amcrest 5MP Turret POE Camera Review</h1>
 
+![Amcrest 5MP PoE turret camera](https://m.media-amazon.com/images/I/51G5lL0jOsL._AC_SL1500_.jpg)
+
+
 Looking for a solid outdoor security camera that punches above its price? The **Amcrest IP5M-T1179EW-28MM** is our go-to recommendation for PoE setups. It's NDAA compliant, IP67 weatherproof, and delivers crisp 5MP video without the hassle.
 
 ## Key Features
