@@ -5,7 +5,10 @@ title: Celtic Salt
 
 <h1 align="center">Celtic Salt</h1>
 
-![Celtic Sea Salt](https://m.media-amazon.com/images/I/41JzEtFNSfL.jpg)
+<div class="content-box">
+  <a href="https://amzn.to/3YXKJn8)"> <img src="https://m.media-amazon.com/images/I/41JzEtFNSfL.jpg">
+  </a>
+</div>
 
 # Celtic Salt
 
