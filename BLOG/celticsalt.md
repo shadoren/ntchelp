@@ -6,7 +6,7 @@ title: Celtic Salt
 <h1 align="center">Celtic Salt</h1>
 
 <div class="content-box">
-  <a href="https://amzn.to/3YXKJn8)"> <img src="https://m.media-amazon.com/images/I/41JzEtFNSfL.jpg">
+  <a href="https://amzn.to/3YXKJn8"> <img src="https://m.media-amazon.com/images/I/41JzEtFNSfL.jpg">
   </a>
 </div>
 
