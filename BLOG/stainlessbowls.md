@@ -5,7 +5,10 @@ title: Stainless Steel Bowls
 
 <h1 align="center">Stainless Steel Bowls</h1>
 
-![Stainless Steel Bowls](https://m.media-amazon.com/images/I/415m0Ipm+JL.jpg)
+<div class="content-box">
+  <a href="https://amzn.to/3yl6D7p"> <img src="https://m.media-amazon.com/images/I/415m0Ipm+JL.jpg">
+  </a>
+</div>
 
 These stainless steel bowls are legit MVPs—lightweight, shiny, and a total breeze to clean! They glide through kitchen chaos like pros, making mixing, prepping, and everything else feel like playtime. Bowl game strong! 🍲✨
 
