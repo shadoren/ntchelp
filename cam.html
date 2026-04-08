@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+ <style>
+ html, body { 
+   margin:0; padding:0; background:#000; overflow:hidden; height:100%; 
+ }
+ #container { 
+   position:relative; width:100vw; height:100vh; 
+ }
+ #v { 
+   width:100%; height:100%; object-fit:contain; display:block; background:#000;
+ }
+ #fs { 
+   position:absolute; bottom:30px; right:30px; z-index:9999; padding:14px 24px; 
+   background:rgba(0,0,0,0.9); color:white; border:none; border-radius:8px; 
+   cursor:pointer; font-size:17px; opacity:1 !important;
+ }
+ </style>
+</head>
+<body>
+ <div id="container">
+   <video id="v"></video>
+   <button id="fs" onclick="toggleFS()">⛶ Fullscreen</button>
+ </div>
+
+ <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+ <script>
+   const container = document.getElementById('container');
+   const v = document.getElementById('v');
+   const btn = document.getElementById('fs');
+   const src = 'https://cam.ntchelp.com/cam1/index.m3u8?video=h264&hls_segment_count=2';
+
+   v.controls = false;
+   v.muted = true;
+
+   function toggleFS() {
+     if (!document.fullscreenElement) {
+       container.requestFullscreen({navigationUI:'hide'});
+     } else {
+       document.exitFullscreen();
+     }
+   }
+
+   if (Hls.isSupported()) {
+     const hls = new Hls({
+       enableWorker: false,
+       lowLatencyMode: true,
+       autoStartLoad: true,
+       liveSyncDurationCount: 2
+     });
+     hls.loadSource(src);
+     hls.attachMedia(v);
+     hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+   } else {
+     v.src = src;
+     v.play();
+   }
+ </script>
+</body>
+</html>
