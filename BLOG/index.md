@@ -5,12 +5,14 @@ title: NTCHELP, INC.
 
 <h1 align="center">Welcome to the Blog!</h1>
 
-[Read about Celtic Salt](celticsalt.md)
+[Read about TORRAS COOLiFY Cyber Fold AI Neck Air Conditioner](torras-coolify)
 
-[Read about Ubiquiti Dream Router 7](ubiquiti-dream-router.md)
+[Read about Celtic Salt](celticsalt)
 
-[Read about Maldon's Sea Salt](maldonsalt.md)
+[Read about Ubiquiti Dream Router 7](ubiquiti-dream-router)
 
-[Read about Stainless Steel Bowls](stainlessbowls.md)
+[Read about Maldon's Sea Salt](maldonsalt)
 
-[Read about 5MP Amcrest Turret Camera](poecamera.md)
+[Read about Stainless Steel Bowls](stainlessbowls)
+
+[Read about 5MP Amcrest Turret Camera](poecamera)
