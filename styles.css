@@ -24,7 +24,7 @@ nav {
 }
 
 .content-box img {
-  max-width: 500px; /* scales images */
+  max-width: 500px;
   width: 80%;
   height: auto;
   display: block;
