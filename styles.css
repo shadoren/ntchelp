@@ -137,6 +137,57 @@ nav a:hover {
   border-radius: 4px;
 }
 
+/* Brand cards (parent home page) */
+.brand-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 1.25rem 0 1.75rem;
+}
+
+@media (min-width: 640px) {
+  .brand-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.brand-card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.brand-card h2 {
+  margin-top: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+  font-size: 1.2rem;
+}
+
+.brand-card p:last-child {
+  margin-bottom: 0;
+  margin-top: auto;
+}
+
+.brand-link {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.brand-link:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
 /* Blockquotes (testimonials / pull quotes) */
 blockquote {
   margin: 1.25rem 0;

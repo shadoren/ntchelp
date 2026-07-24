@@ -1,18 +1,17 @@
 ---
 layout: default
-title: NTCHELP, INC.
+title: Blog — NTCHELP, INC.
 ---
 
-<h1 align="center">Welcome to the Blog!</h1>
+# Blog
 
-[Read about TORRAS COOLiFY Cyber Fold AI Neck Air Conditioner](/BLOG/torras-coolify)
+Product recommendations and notes from NTCHELP, INC. For business IT support, visit [NanoTech Computing](/nanotech/).
 
-[Read about Celtic Salt](/BLOG/celticsalt)
+## Posts
 
-[Read about Ubiquiti Dream Router 7](/BLOG/ubiquiti-dream-router)
-
-[Read about Maldon's Sea Salt](/BLOG/maldonsalt)
-
-[Read about Stainless Steel Bowls](/BLOG/stainlessbowls)
-
-[Read about 5MP Amcrest Turret Camera](/BLOG/poecamera)
+- [TORRAS COOLiFY Cyber Fold AI Neck Air Conditioner](/blog/torras-coolify)
+- [Celtic Salt](/blog/celticsalt)
+- [Ubiquiti Dream Router 7](/blog/ubiquiti-dream-router)
+- [Maldon's Sea Salt](/blog/maldonsalt)
+- [Stainless Steel Bowls](/blog/stainlessbowls)
+- [5MP Amcrest Turret Camera](/blog/poecamera)

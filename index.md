@@ -3,26 +3,34 @@ layout: default
 title: NTCHELP, INC.
 ---
 
-<h1 align="center">NTCHELP, INC.</h1>
+# NTCHELP, INC.
 
+NTCHELP, INC. is the parent company that operates the brands below. We provide the corporate structure for long-running technology services and product brands under one legal entity.
 
-NTCHELP, INC. specializes in remote technical support and maintenance for businesses. Previously offering on-site services, we have transitioned to a fully remote model after relocating to Georgia. Our business support is designed for efficiency, with expedited service available exclusively to existing clients with an established relationship.
+## History
+
+NanoTech Computing was started as an on-site computer repair business. That business later became NTCHELP, INC. NanoTech Computing continues as a DBA of NTCHELP, INC. SassySqrl is also a DBA under NTCHELP, INC.
+
+## Our brands
+
+<div class="brand-grid">
+  <div class="content-box brand-card">
+    <h2>NanoTech Computing</h2>
+    <p>Remote technical support and maintenance for businesses. A DBA of NTCHELP, INC.</p>
+    <p><a class="brand-link" href="/nanotech/">Visit NanoTech Computing →</a></p>
+  </div>
+  <div class="content-box brand-card">
+    <h2>SassySqrl</h2>
+    <p>Organic dry shampoo powder for hair and dogs — a product brand and DBA of NTCHELP, INC.</p>
+    <p><a class="brand-link" href="/sassysqrl/">Visit SassySqrl →</a></p>
+  </div>
+</div>
 
 ## Leadership
 
-Michael Carleton - CEO  
-Heather Carleton - Secretary
+- **Michael Carleton** — CEO
+- **Heather Carleton** — Secretary
 
-## Contact Information
+## Contact
 
-**Phone:** 530-676-6055
-
-## Backup Solution
-<div class="content-box">
-  <a href="https://www.backblaze.com/cloud-backup.html#af9px9"> <img src="backblaze.png">
-  </a>
-</div>
-
-Everyone needs a proper backup service to protect their data from loss and/or theft. In most cases this service will cover your needs for a reasonable monthly/yearly price!
-
-Backblaze will automatically keep a copy of all your files off-site with file history. This is sufficient to protect your data in most scenarios from loss! [Learn more](https://www.backblaze.com/cloud-backup.html#af9px9)
+For support or product questions, please contact the relevant brand through its own page: [NanoTech Computing](/nanotech/) or [SassySqrl](/sassysqrl/).
