@@ -1,26 +1,131 @@
+/* NTCHELP — professional dark theme
+   charcoal bg · near-white text · restrained emerald accent */
+
+:root {
+  --bg: #1a1c1e;
+  --bg-elevated: #242628;
+  --bg-nav: #141617;
+  --text: #e8eaed;
+  --text-muted: #9aa0a6;
+  --accent: #2f8f6d;
+  --accent-hover: #3da87f;
+  --border: #2e3236;
+  --max-width: 800px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
 body {
-  background: #000;
-  color: #0f0;
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 0 20px;
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
+  background: var(--bg);
+  color: var(--text);
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 20px 48px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Typography */
+h1,
+h2,
+h3 {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  margin-top: 0.5em;
+  margin-bottom: 0.75em;
+  font-size: 1.85rem;
+}
+
+h2 {
+  margin-top: 1.75em;
+  margin-bottom: 0.6em;
+  font-size: 1.35rem;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  margin-top: 1.4em;
+  font-size: 1.15rem;
+}
+
+p {
+  margin: 0 0 1em;
+  color: var(--text);
+}
+
+strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Links — emerald accent */
 a {
-  color: #0f0;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s ease;
 }
 
-h1, h2 {
-  color: #0f0;
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
 }
 
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Navigation */
 nav {
-  background: #111;
-  padding: 15px;
+  background: var(--bg-nav);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
   text-align: center;
-  margin-bottom: 30px;
+  margin: 0 -20px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  margin: 0 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: color 0.15s ease;
+}
+
+nav a:hover {
+  color: var(--accent-hover);
+  text-decoration: none;
+}
+
+/* Content helpers */
+.content-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin: 1.25rem 0;
 }
 
 .content-box img {
@@ -29,4 +134,78 @@ nav {
   height: auto;
   display: block;
   margin: 0 auto;
+  border-radius: 4px;
+}
+
+/* Blockquotes (testimonials / pull quotes) */
+blockquote {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+blockquote strong {
+  font-style: normal;
+  color: var(--text);
+}
+
+/* Lists */
+ul,
+ol {
+  margin: 0 0 1em;
+  padding-left: 1.4em;
+  color: var(--text);
+}
+
+li {
+  margin-bottom: 0.35em;
+}
+
+/* Horizontal rules */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+/* Code (blog technical notes) */
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  color: var(--text);
+}
+
+pre {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Images in markdown content */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Selection */
+::selection {
+  background: rgba(47, 143, 109, 0.35);
+  color: var(--text);
 }
