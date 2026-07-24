@@ -339,6 +339,106 @@
     stuck: true,
   };
 
+  // --- audio (Web Audio API — soft, short, varied) ---
+  const audio = {
+    ctx: null,
+    master: null,
+    lastPaddle: 0,
+    lastBrick: 0,
+  };
+
+  function ensureAudio() {
+    if (audio.ctx) {
+      if (audio.ctx.state === "suspended") audio.ctx.resume();
+      return audio.ctx;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audio.ctx = new AC();
+    audio.master = audio.ctx.createGain();
+    audio.master.gain.value = 0.22; // overall calm level
+    audio.master.connect(audio.ctx.destination);
+    return audio.ctx;
+  }
+
+  function playTone({ type = "sine", freq = 440, dur = 0.08, gain = 0.15, slide = 0, delay = 0 }) {
+    const actx = ensureAudio();
+    if (!actx || !audio.master) return;
+    const t0 = actx.currentTime + delay;
+    const osc = actx.createOscillator();
+    const g = actx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (slide) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t0 + dur);
+    }
+    // quick attack, soft release — avoids clicky/annoying edges
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g);
+    g.connect(audio.master);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+
+  function playNoiseBurst({ dur = 0.06, gain = 0.08, freq = 800 }) {
+    const actx = ensureAudio();
+    if (!actx || !audio.master) return;
+    const n = Math.max(1, Math.floor(actx.sampleRate * dur));
+    const buf = actx.createBuffer(1, n, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      // fade-shaped noise so it doesn't spit
+      const env = 1 - i / n;
+      data[i] = (Math.random() * 2 - 1) * env * env;
+    }
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const filter = actx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = freq;
+    filter.Q.value = 0.9;
+    const g = actx.createGain();
+    const t0 = actx.currentTime;
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(audio.master);
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+  }
+
+  /** Soft paddle thup — low, muted, rate-limited */
+  function sfxPaddle() {
+    const now = performance.now();
+    if (now - audio.lastPaddle < 45) return;
+    audio.lastPaddle = now;
+    const f = rand(180, 230);
+    playTone({ type: "triangle", freq: f, dur: 0.07, gain: 0.11, slide: -50 });
+    playTone({ type: "sine", freq: f * 1.5, dur: 0.05, gain: 0.04, slide: -30 });
+  }
+
+  /** Brick chip / shatter — crystalline, short, slight pitch jitter */
+  function sfxBrick(destroyed) {
+    const now = performance.now();
+    // allow denser brick hits than paddle, but still soft-cap spam
+    if (now - audio.lastBrick < 18) return;
+    audio.lastBrick = now;
+    if (destroyed) {
+      const base = rand(420, 560);
+      playTone({ type: "sine", freq: base, dur: 0.1, gain: 0.1, slide: -180 });
+      playTone({ type: "triangle", freq: base * 1.6, dur: 0.08, gain: 0.05, slide: -220, delay: 0.01 });
+      playNoiseBurst({ dur: 0.05, gain: 0.045, freq: rand(900, 1400) });
+    } else {
+      // hit but not destroyed (reinforced brick)
+      const base = rand(300, 380);
+      playTone({ type: "triangle", freq: base, dur: 0.05, gain: 0.07, slide: -60 });
+      playNoiseBurst({ dur: 0.03, gain: 0.03, freq: 700 });
+    }
+  }
+
   // --- helpers ---
   function rand(a, b) {
     return a + Math.random() * (b - a);
@@ -576,6 +676,7 @@
     b.vx = Math.sin(angle) * speed;
     b.vy = -Math.abs(Math.cos(angle) * speed);
     b.y = paddle.y - b.r - 0.5;
+    sfxPaddle();
   }
 
   function resolveBrick(b, brick) {
@@ -604,11 +705,13 @@
       state.score += pts * (brick.maxHp > 1 ? 2 : 1);
       spawnParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.c1, 14);
       maybeDropPowerup(brick);
+      sfxBrick(true);
       updateHud();
       checkWin();
     } else {
       spawnParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.c2, 6);
       state.score += 15;
+      sfxBrick(false);
       updateHud();
     }
   }
@@ -980,6 +1083,7 @@
 
   function onPointerDown(e) {
     e.preventDefault();
+    ensureAudio();
     state.pointerActive = true;
     state.pointerX = pointerPos(e);
     if (state.mode === "ready") {
@@ -1012,6 +1116,7 @@
     if (["ArrowLeft", "ArrowRight", " ", "Spacebar"].includes(e.key)) e.preventDefault();
 
     if (e.key === " " || e.key === "Spacebar") {
+      ensureAudio();
       if (state.mode === "menu") {
         startGame(true);
       } else if (state.mode === "ready") {
@@ -1043,14 +1148,15 @@
     state.keys[e.key] = false;
   });
 
-  el.startBtn.addEventListener("click", () => startGame(true));
+  el.startBtn.addEventListener("click", () => { ensureAudio(); startGame(true); });
   el.resumeBtn.addEventListener("click", () => {
+    ensureAudio();
     state.mode = ball.stuck ? "ready" : "playing";
     hideOverlays();
   });
-  el.restartFromPauseBtn.addEventListener("click", () => startGame(true));
-  el.nextBtn.addEventListener("click", () => nextLevel());
-  el.retryBtn.addEventListener("click", () => startGame(true));
+  el.restartFromPauseBtn.addEventListener("click", () => { ensureAudio(); startGame(true); });
+  el.nextBtn.addEventListener("click", () => { ensureAudio(); nextLevel(); });
+  el.retryBtn.addEventListener("click", () => { ensureAudio(); startGame(true); });
 
   // boot
   initStars();
