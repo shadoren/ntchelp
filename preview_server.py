@@ -173,11 +173,30 @@ def apply_layout(title: str, content: str) -> str:
 """
 
 
-def resolve_path(url_path: str) -> Path | None:
-    """Map request path to a file under ROOT."""
+def parse_url_path(url_path: str) -> str:
     path = urllib.parse.unquote(url_path.split("?", 1)[0])
     if path.startswith("/"):
         path = path[1:]
+    return path
+
+
+def needs_trailing_slash_redirect(url_path: str) -> str | None:
+    """If path is a directory without a trailing slash, return Location to redirect to."""
+    raw = urllib.parse.unquote(url_path.split("?", 1)[0])
+    if not raw or raw.endswith("/"):
+        return None
+    path = raw[1:] if raw.startswith("/") else raw
+    if ".." in path.split("/"):
+        return None
+    candidate = ROOT / path
+    if candidate.is_dir():
+        return raw + "/"
+    return None
+
+
+def resolve_path(url_path: str) -> Path | None:
+    """Map request path to a file under ROOT."""
+    path = parse_url_path(url_path)
     if ".." in path.split("/"):
         return None
 
@@ -205,6 +224,14 @@ def resolve_path(url_path: str) -> Path | None:
     return None
 
 
+def render_markdown(target: Path) -> bytes:
+    raw = target.read_text(encoding="utf-8")
+    title, body = parse_front_matter(raw)
+    content = md_to_html(body)
+    page = apply_layout(title, content)
+    return page.encode("utf-8")
+
+
 class PreviewHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -212,31 +239,48 @@ class PreviewHandler(SimpleHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         print(f"[{self.log_date_time_string()}] {args[0]}")
 
-    def do_GET(self) -> None:
+    def _redirect(self, location: str) -> None:
+        self.send_response(301)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def _serve(self, head_only: bool = False) -> None:
+        # Keep relative links working: /BLOG → /BLOG/
+        redirect_to = needs_trailing_slash_redirect(self.path)
+        if redirect_to is not None:
+            self._redirect(redirect_to)
+            return
+
         target = resolve_path(self.path)
         if target is None:
-            # Fall back to default static handling (404 if missing)
+            if head_only:
+                return super().do_HEAD()
             return super().do_GET()
 
         if target.suffix.lower() == ".md":
-            raw = target.read_text(encoding="utf-8")
-            title, body = parse_front_matter(raw)
-            content = md_to_html(body)
-            page = apply_layout(title, content)
-            data = page.encode("utf-8")
+            data = render_markdown(target)
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
-            self.wfile.write(data)
+            if not head_only:
+                self.wfile.write(data)
             return
 
         # Static files via parent (correct MIME types)
-        # Rewrite path relative to ROOT for SimpleHTTPRequestHandler
         rel = target.relative_to(ROOT).as_posix()
         self.path = "/" + rel
+        if head_only:
+            return super().do_HEAD()
         return super().do_GET()
+
+    def do_GET(self) -> None:
+        self._serve(head_only=False)
+
+    def do_HEAD(self) -> None:
+        self._serve(head_only=True)
 
 
 def main() -> None:
