@@ -1,6 +1,6 @@
 ---
 layout: default
-title: SassySqrl — NTCHELP, INC.
+title: SASSYSQRL — NTCHELP, INC.
 ---
 
 # SassySqrl
