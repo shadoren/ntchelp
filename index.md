@@ -20,17 +20,17 @@ NanoTech Computing was started as an on-site computer repair business. That busi
     <p><a class="brand-link" href="/nanotech/">Visit NanoTech Computing →</a></p>
   </div>
   <div class="content-box brand-card">
-    <h2>SassySqrl</h2>
+    <h2>SASSYSQRL</h2>
     <p>Organic dry shampoo powder for hair and dogs — a product brand and DBA of NTCHELP, INC.</p>
-    <p><a class="brand-link" href="/sassysqrl/">Visit SassySqrl →</a></p>
+    <p><a class="brand-link" href="/sassysqrl/">Visit SASSYSQRL →</a></p>
   </div>
 </div>
 
 ## Leadership
 
 - **Michael Carleton** — CEO
-- **Heather Carleton** — Secretary
+- **Heather Carleton** — SecretarY
 
 ## Contact
 
-For support or product questions, please contact the relevant brand through its own page: [NanoTech Computing](/nanotech/) or [SassySqrl](/sassysqrl/).
+For support or product questions, please contact the relevant brand through its own page: [NanoTech Computing](/nanotech/) or [SASSYSQRL](/sassysqrl/).
