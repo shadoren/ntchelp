@@ -29,7 +29,7 @@ NanoTech Computing was started as an on-site computer repair business. That busi
 ## Leadership
 
 - **Michael Carleton** — CEO
-- **Heather Carleton** — SecretarY
+- **Heather Carleton** — Secretary
 
 ## Contact
 
