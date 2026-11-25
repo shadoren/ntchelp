@@ -119,6 +119,73 @@ nav a:hover {
   text-decoration: none;
 }
 
+/* Games dropdown */
+.nav-drop {
+  position: relative;
+  display: inline-block;
+  margin: 0 10px;
+}
+
+.nav-drop-toggle {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: color 0.15s ease;
+}
+
+.nav-drop-caret {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  font-size: 0.75em;
+}
+
+.nav-drop:hover .nav-drop-caret,
+.nav-drop.open .nav-drop-caret {
+  transform: rotate(180deg);
+}
+
+.nav-drop-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  min-width: 160px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+
+.nav-drop-menu a {
+  display: block;
+  padding: 8px 14px;
+  margin: 0;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.nav-drop-menu a:hover {
+  background: rgba(77, 225, 193, 0.1);
+}
+
+.nav-drop:hover .nav-drop-menu,
+.nav-drop.open .nav-drop-menu {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .nav-drop-menu {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}
+
 /* Content helpers */
 .content-box {
   background: var(--bg-elevated);
