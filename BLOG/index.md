@@ -9,6 +9,7 @@ Product recommendations and notes from NTCHELP, INC. For business IT support, vi
 
 ## Posts
 
+- [VIVO Electric Dual Motor Standing Desk](/blog/vivo-standing-desk)
 - [TORRAS COOLiFY Cyber Fold AI Neck Air Conditioner](/blog/torras-coolify)
 - [Celtic Salt](/blog/celticsalt)
 - [Ubiquiti Dream Router 7](/blog/ubiquiti-dream-router)
