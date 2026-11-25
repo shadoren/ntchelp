@@ -161,6 +161,17 @@ nav a:hover {
   z-index: 20;
 }
 
+/* Invisible bridge over the 10px gap so :hover isn't lost while the
+   cursor travels from the toggle down to the menu (keeps it open). */
+.nav-drop-menu::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: -6px;
+  right: -6px;
+  height: 18px;
+}
+
 .nav-drop-menu a {
   display: block;
   padding: 8px 14px;
