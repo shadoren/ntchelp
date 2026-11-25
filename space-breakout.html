@@ -305,6 +305,7 @@
           </p>
           <input class="score-name-input" id="nameInput" type="text" maxlength="12" placeholder="Callsign" aria-label="Player name">
           <div class="top-scores" id="startScores"></div>
+          <div class="top-scores" id="startGlobal"></div>
           <div class="actions">
             <button class="btn-primary" id="startBtn" type="button">Launch mission</button>
           </div>
@@ -328,6 +329,7 @@
           <h2>Hull breach</h2>
           <p id="loseText">Mission failed. The lattice remains.</p>
           <div class="top-scores" id="loseScores"></div>
+          <div class="top-scores" id="loseGlobal"></div>
           <div class="actions">
             <button class="btn-primary" id="retryBtn" type="button">Retry</button>
           </div>
@@ -365,11 +367,15 @@
     nameInput: document.getElementById("nameInput"),
     startScores: document.getElementById("startScores"),
     loseScores: document.getElementById("loseScores"),
+    startGlobal: document.getElementById("startGlobal"),
+    loseGlobal: document.getElementById("loseGlobal"),
   };
 
   const STORAGE_KEY = "ntchelp.space-breakout.best";
   const STORAGE_KEY_LIST = "ntchelp.space-breakout.scores";
   const STORAGE_KEY_NAME = "ntchelp.space-breakout.name";
+  const SUPABASE_URL = "https://lhksmttjpytpvtdebh.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_o6Nr6Spprt52QxK8VjkEYA_2RezYxrt";
   const W = canvas.width;
   const H = canvas.height;
 
@@ -613,6 +619,65 @@
     }
   }
 
+  // --- global (Supabase) leaderboard ---
+  async function loadGlobalScores() {
+    try {
+      const r = await fetch(SUPABASE_URL + "/rest/v1/scores?select=name,score&order=score.desc&limit=5", { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY } });
+      if (!r.ok) return [];
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.slice(0, 5) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function submitScore(name, score) {
+    try {
+      fetch(SUPABASE_URL + "/rest/v1/scores", {
+        method: "POST",
+        headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimum" },
+        body: JSON.stringify({ name: String(name || "Player").slice(0, 12), score: Math.max(0, Number(score) || 0) })
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  function renderGlobal() {
+    const paint = (list) => {
+      for (const container of [el.startGlobal, el.loseGlobal]) {
+        container.textContent = "";
+        const h3 = document.createElement("h3");
+        h3.textContent = "Global Top 5";
+        container.appendChild(h3);
+        if (!list || list.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "no-scores";
+          empty.textContent = "Loading global scores…";
+          container.appendChild(empty);
+        } else {
+          list.forEach((entry, i) => {
+            const row = document.createElement("div");
+            row.className = "score-row";
+            const rank = document.createElement("span");
+            rank.className = "rank";
+            rank.textContent = String(i + 1);
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = String(entry.name || "Player").slice(0, 12);
+            const pts = document.createElement("span");
+            pts.className = "pts";
+            pts.textContent = String(entry.score);
+            row.appendChild(rank);
+            row.appendChild(name);
+            row.appendChild(pts);
+            container.appendChild(row);
+          });
+        }
+      }
+    };
+    paint([]);
+    loadGlobalScores().then(paint).catch(() => {});
+  }
+
   function initNameInput() {
     el.nameInput.value = loadName();
     el.nameInput.addEventListener("input", () => {
@@ -782,6 +847,8 @@
       state.mode = "lose";
       saveBest();
       recordScore(state.score);
+      submitScore((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.score);
+      renderGlobal();
       el.loseText.textContent = `Final score ${state.score}. Best ${state.best}.`;
       show(el.loseCard);
       return;
@@ -1309,6 +1376,7 @@
   initStars();
   initNameInput();
   renderScores();
+  renderGlobal();
   updateHud();
   show(el.startCard);
   // pre-draw empty field
