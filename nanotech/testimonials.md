@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Client Testimonials — NanoTech Computing
+permalink: /nanotech/testimonials/
 ---
 
 # Client testimonials
