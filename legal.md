@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Legal - NTCHELP, INC.
+title: Legal — NTCHELP, INC.
 ---
 
 # Legal
