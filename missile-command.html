@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Missile Command — NTCHELP</title>
+  <style>
+    :root {
+      --bg: #070a12;
+      --panel: #0f1524;
+      --text: #e8eefc;
+      --muted: #8b97b3;
+      --accent: #4de1c1;
+      --accent-2: #7c6cff;
+      --danger: #ff5c7a;
+      --warn: #ffc857;
+      --border: #243049;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: radial-gradient(1200px 700px at 50% -10%, #152040 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .shell {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 12px 14px 16px;
+      gap: 10px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 16px;
+    }
+
+    .title-block h1 {
+      font-size: 1.15rem;
+      letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    .title-block p {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 2px;
+    }
+
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .stat {
+      min-width: 78px;
+      background: rgba(15, 21, 36, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    .stat .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat .value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--accent);
+    }
+
+    .btn-mute {
+      min-width: 92px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+
+    .btn-mute:hover { border-color: var(--accent); color: var(--accent); }
+
+    .stage-wrap {
+      position: relative;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game {
+      width: min(100%, 920px);
+      height: 100%;
+      max-height: 100%;
+      display: block;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #050812;
+      box-shadow:
+        0 0 0 1px rgba(77, 225, 193, 0.08),
+        0 20px 50px rgba(0, 0, 0, 0.45),
+        inset 0 0 80px rgba(80, 120, 255, 0.08);
+      cursor: crosshair;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .overlay-card {
+      pointer-events: auto;
+      width: min(420px, calc(100% - 28px));
+      background: rgba(10, 14, 26, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 20px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .overlay-card h2 {
+      font-size: 1.45rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .overlay-card p {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .overlay-card.hidden { display: none; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+
+    button:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3fd6b5, #5b6dff);
+      color: #061018;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .score-name-input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      background: rgba(15, 21, 36, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .score-name-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .top-scores {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .top-scores h3 {
+      color: var(--accent);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .top-scores .score-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .top-scores .score-row .rank {
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 24px;
+    }
+
+    .top-scores .score-row .name {
+      flex: 1;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .top-scores .score-row .pts {
+      font-weight: 600;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .top-scores .no-scores {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px 16px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    footer kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 0.74rem;
+    }
+
+    @media (max-width: 640px) {
+      .title-block h1 { font-size: 1rem; }
+      .stat { min-width: 64px; padding: 5px 8px; }
+      .stat .value { font-size: 0.95rem; }
+      footer { justify-content: center; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="title-block">
+        <h1>MISSILE COMMAND</h1>
+        <p><a href="/" style="color:var(--muted)">← Home</a> · intercept the barrage · save the cities</p>
+      </div>
+      <div class="hud">
+        <div class="stat"><span class="label">Score</span><span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Wave</span><span class="value" id="wave">1</span></div>
+        <div class="stat"><span class="label">Cities</span><span class="value" id="cities">6</span></div>
+        <div class="stat"><span class="label">Best</span><span class="value" id="best">0</span></div>
+        <button class="btn-mute" id="muteBtn" type="button">Sound: on</button>
+      </div>
+    </header>
+
+    <div class="stage-wrap">
+      <canvas id="game" width="900" height="600" aria-label="Missile Command game canvas"></canvas>
+      <div class="overlay">
+        <div class="overlay-card" id="startCard">
+          <h2>Missile Command</h2>
+          <p>
+            Enemy missiles streak in from the sky. Aim with the mouse / touch and click / tap to fire interceptors.
+            Each kill scores <strong>10</strong>; each city you save banks <strong>100</strong> at wave's end.
+            Lose every city and the mission is over.
+          </p>
+          <input class="score-name-input" id="nameInput" type="text" maxlength="12" placeholder="Callsign" aria-label="Player name">
+          <div class="top-scores" id="startScores"></div>
+          <div class="top-scores" id="startGlobal"></div>
+          <div class="actions">
+            <button class="btn-primary" id="startBtn" type="button">Engage</button>
+          </div>
+        </div>
+        <div class="overlay-card hidden" id="loseCard">
+          <h2>Perimeter lost</h2>
+          <p id="loseText">Every city fell.</p>
+          <div class="top-scores" id="loseScores"></div>
+          <div class="top-scores" id="loseGlobal"></div>
+          <div class="actions">
+            <button class="btn-primary" id="retryBtn" type="button">Re-engage</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span><kbd>Mouse</kbd>/<kbd>Touch</kbd> aim · <kbd>Click</kbd>/<kbd>Tap</kbd> fire · <kbd>R</kbd> restart · <kbd>Enter</kbd> start</span>
+      <span>High score stored in this browser</span>
+    </footer>
+  </div>
+
+  <script>
+  (() => {
+    // ---------- CONFIG ----------
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const STORAGE_KEY = "ntchelp.missile.best";
+    const STORAGE_KEY_LIST = "ntchelp.missile.scores";
+    const STORAGE_KEY_NAME = "ntchelp.missile.name";
+    const SUPABASE_URL = "https://lhksmttjpytpvtdebh.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_o6Nr6Spprt52QxK8VjkEYA_2RezYxrt";
+
+    const CFG = {
+      cityCount: 6,
+      cityW: 46,
+      cityH: 26,
+      groundY: H - 40,
+      enemySpeedMin: 70,
+      enemySpeedMax: 150,
+      interceptorSpeed: 560,
+      maxInterceptors: 10,
+      killPoints: 10,
+      citySavePoints: 100,
+      waveBase: 5,
+      wavePerLevel: 2,
+      spawnIntervalBase: 1.4,
+      splashR: 26,
+      crossR: 34,
+    };
+
+    const el = {
+      score: document.getElementById("score"),
+      wave: document.getElementById("wave"),
+      cities: document.getElementById("cities"),
+      best: document.getElementById("best"),
+      startCard: document.getElementById("startCard"),
+      loseCard: document.getElementById("loseCard"),
+      loseText: document.getElementById("loseText"),
+      startBtn: document.getElementById("startBtn"),
+      retryBtn: document.getElementById("retryBtn"),
+      muteBtn: document.getElementById("muteBtn"),
+      nameInput: document.getElementById("nameInput"),
+      startScores: document.getElementById("startScores"),
+      loseScores: document.getElementById("loseScores"),
+      startGlobal: document.getElementById("startGlobal"),
+      loseGlobal: document.getElementById("loseGlobal"),
+    };
+
+    // ---------- STATE ----------
+    const state = {
+      mode: "menu", // menu | playing | wavebreak | gameover
+      score: 0,
+      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      wave: 1,
+      cities: [],
+      enemies: [],
+      interceptors: [],
+      splashes: [],
+      particles: [],
+      stars: [],
+      spawnTimer: 0,
+      toSpawn: 0,
+      activeInterceptors: 0,
+      waveTimer: 0,
+      shake: 0,
+      aim: { x: W / 2, y: H / 2 },
+      lastTs: 0,
+    };
+
+    // ---------- AUDIO ----------
+    const audio = {
+      ctx: null,
+      master: null,
+      muted: false,
+      lastLaunch: 0,
+    };
+
+    function ensureAudio() {
+      if (audio.ctx) {
+        if (audio.ctx.state === "suspended") audio.ctx.resume();
+        return audio.ctx;
+      }
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audio.ctx = new AC();
+      audio.master = audio.ctx.createGain();
+      audio.master.gain.value = audio.muted ? 0 : 0.22;
+      audio.master.connect(audio.ctx.destination);
+      return audio.ctx;
+    }
+
+    function playTone({ type = "sine", freq = 440, dur = 0.08, gain = 0.15, slide = 0, delay = 0 }) {
+      const actx = ensureAudio();
+      if (!actx || !audio.master || audio.muted) return;
+      const t0 = actx.currentTime + delay;
+      const osc = actx.createOscillator();
+      const g = actx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (slide) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t0 + dur);
+      }
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(audio.master);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    }
+
+    function playNoiseBurst({ dur = 0.3, gain = 0.15, freq = 400 }) {
+      const actx = ensureAudio();
+      if (!actx || !audio.master || audio.muted) return;
+      const n = Math.max(1, Math.floor(actx.sampleRate * dur));
+      const buf = actx.createBuffer(1, n, actx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) {
+        const env = 1 - i / n;
+        data[i] = (Math.random() * 2 - 1) * env * env;
+      }
+      const src = actx.createBufferSource();
+      src.buffer = buf;
+      const filter = actx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = freq;
+      const g = actx.createGain();
+      const t0 = actx.currentTime;
+      g.gain.setValueAtTime(gain, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(audio.master);
+      src.start(t0);
+      src.stop(t0 + dur + 0.02);
+    }
+
+    function sfxLaunch() {
+      const now = performance.now();
+      if (now - audio.lastLaunch < 90) return;
+      audio.lastLaunch = now;
+      playTone({ type: "sawtooth", freq: 320, dur: 0.14, gain: 0.08, slide: 260 });
+      playNoiseBurst({ dur: 0.1, gain: 0.04, freq: 1600 });
+    }
+
+    function sfxImpact() {
+      playNoiseBurst({ dur: 0.28, gain: 0.16, freq: 600 });
+      playTone({ type: "triangle", freq: 180, dur: 0.22, gain: 0.09, slide: -120 });
+    }
+
+    function sfxExplosion() {
+      playNoiseBurst({ dur: 0.45, gain: 0.2, freq: 320 });
+      playTone({ type: "sine", freq: 90, dur: 0.4, gain: 0.12, slide: -40 });
+    }
+
+    function toggleMute() {
+      ensureAudio();
+      audio.muted = !audio.muted;
+      if (audio.master) audio.master.gain.value = audio.muted ? 0 : 0.22;
+      el.muteBtn.textContent = audio.muted ? "Sound: off" : "Sound: on";
+    }
+
+    // ---------- HELPERS ----------
+    function rand(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function show(card) {
+      for (const c of [el.startCard, el.loseCard]) c.classList.toggle("hidden", c !== card);
+    }
+
+    function hideOverlays() {
+      for (const c of [el.startCard, el.loseCard]) c.classList.add("hidden");
+    }
+
+    function updateHud() {
+      el.score.textContent = String(state.score);
+      el.wave.textContent = String(state.wave);
+      el.cities.textContent = String(state.cities.filter((c) => c.alive).length);
+      el.best.textContent = String(state.best);
+    }
+
+    function saveBest() {
+      if (state.score > state.best) {
+        state.best = state.score;
+        localStorage.setItem(STORAGE_KEY, String(state.best));
+      }
+      updateHud();
+    }
+
+    // ---------- SCORES LIST ----------
+    function loadName() {
+      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+    }
+
+    function saveName(name) {
+      localStorage.setItem(STORAGE_KEY_NAME, name);
+    }
+
+    function loadScores() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveScores(list) {
+      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+    }
+
+    function recordScore(score) {
+      const name = (el.nameInput.value || "").trim().slice(0, 12) || "Player";
+      const list = loadScores();
+      list.push({ name, score });
+      list.sort((a, b) => b.score - a.score);
+      const top = list.slice(0, 5);
+      saveScores(top);
+      renderScores();
+    }
+
+    function renderScores() {
+      const list = loadScores();
+      for (const container of [el.startScores, el.loseScores]) {
+        container.textContent = "";
+        const h3 = document.createElement("h3");
+        h3.textContent = "Top Scores";
+        container.appendChild(h3);
+        if (list.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "no-scores";
+          empty.textContent = "No scores yet — be the first!";
+          container.appendChild(empty);
+        } else {
+          list.forEach((entry, i) => {
+            const row = document.createElement("div");
+            row.className = "score-row";
+            const rank = document.createElement("span");
+            rank.className = "rank";
+            rank.textContent = String(i + 1);
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = entry.name;
+            const pts = document.createElement("span");
+            pts.className = "pts";
+            pts.textContent = String(entry.score);
+            row.appendChild(rank);
+            row.appendChild(name);
+            row.appendChild(pts);
+            container.appendChild(row);
+          });
+        }
+      }
+    }
+
+    // ---------- GLOBAL (Supabase) LEADERBOARD ----------
+    async function loadGlobalScores() {
+      try {
+        const r = await fetch(SUPABASE_URL + "/rest/v1/scores?select=name,score&order=score.desc&limit=5", { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY } });
+        if (!r.ok) return [];
+        const rows = await r.json();
+        return Array.isArray(rows) ? rows.slice(0, 5) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function submitScore(name, score) {
+      try {
+        fetch(SUPABASE_URL + "/rest/v1/scores", {
+          method: "POST",
+          headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimum" },
+          body: JSON.stringify({ name: String(name || "Player").slice(0, 12), score: Math.max(0, Number(score) || 0) })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    function renderGlobal() {
+      const paint = (list) => {
+        for (const container of [el.startGlobal, el.loseGlobal]) {
+          container.textContent = "";
+          const h3 = document.createElement("h3");
+          h3.textContent = "Global Top 5";
+          container.appendChild(h3);
+          if (!list || list.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "no-scores";
+            empty.textContent = "Loading global scores…";
+            container.appendChild(empty);
+          } else {
+            list.forEach((entry, i) => {
+              const row = document.createElement("div");
+              row.className = "score-row";
+              const rank = document.createElement("span");
+              rank.className = "rank";
+              rank.textContent = String(i + 1);
+              const name = document.createElement("span");
+              name.className = "name";
+              name.textContent = String(entry.name || "Player").slice(0, 12);
+              const pts = document.createElement("span");
+              pts.className = "pts";
+              pts.textContent = String(entry.score);
+              row.appendChild(rank);
+              row.appendChild(name);
+              row.appendChild(pts);
+              container.appendChild(row);
+            });
+          }
+        }
+      };
+      paint([]);
+      loadGlobalScores().then(paint).catch(() => {});
+    }
+
+    function initNameInput() {
+      el.nameInput.value = loadName();
+      el.nameInput.addEventListener("input", () => {
+        const v = el.nameInput.value.trim().slice(0, 12);
+        saveName(v || "Player");
+      });
+    }
+
+    // ---------- ENTITIES ----------
+    function initStars() {
+      state.stars = Array.from({ length: 80 }, () => ({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        z: rand(0.4, 1.3),
+        tw: Math.random() * Math.PI * 2,
+      }));
+    }
+
+    function buildCities() {
+      state.cities = [];
+      const margin = 40;
+      const usable = W - margin * 2;
+      const slot = usable / CFG.cityCount;
+      for (let i = 0; i < CFG.cityCount; i++) {
+        const cx = margin + slot * i + slot / 2;
+        state.cities.push({ x: cx, alive: true, glow: Math.random() * Math.PI * 2 });
+      }
+    }
+
+    function spawnEnemy() {
+      const tx = rand(30, W - 30);
+      const ty = CFG.groundY + rand(-10, 6);
+      const sx = rand(20, W - 20);
+      const speed = rand(CFG.enemySpeedMin, CFG.enemySpeedMax) + state.wave * 6;
+      const dx = tx - sx;
+      const dy = ty - 0;
+      const len = Math.hypot(dx, dy) || 1;
+      state.enemies.push({
+        x: sx, y: 0, sx, sy: 0, tx, ty,
+        vx: (dx / len) * speed,
+        vy: (dy / len) * speed,
+      });
+    }
+
+    function spawnParticles(x, y, color, n, spread) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = rand(40, spread);
+        state.particles.push({
+          x, y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          life: rand(0.4, 0.9),
+          max: 0.9,
+          r: rand(1.5, 4),
+          color,
+        });
+      }
+    }
+
+    function fireInterceptor(target) {
+      if (state.activeInterceptors >= CFG.maxInterceptors) return;
+      const ox = W / 2;
+      const oy = CFG.groundY;
+      const dx = target.x - ox;
+      const dy = target.y - oy;
+      const len = Math.hypot(dx, dy) || 1;
+      state.interceptors.push({
+        ox, oy,
+        tx: target.x, ty: target.y,
+        x: ox, y: oy,
+        dist: len,
+        traveled: 0,
+      });
+      state.activeInterceptors += 1;
+      sfxLaunch();
+    }
+
+    function makeSplash(x, y, color, r) {
+      state.splashes.push({ x, y, r: 0, max: r, color, life: 0.9 });
+    }
+
+    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+    function hitCity(x, y) {
+      for (const c of state.cities) {
+        if (!c.alive) continue;
+        if (Math.abs(x - c.x) < CFG.cityW / 2 + 6 && y > CFG.groundY - CFG.cityH) {
+          c.alive = false;
+          state.shake = 10;
+          spawnParticles(c.x, CFG.groundY - CFG.cityH / 2, "#ff5c7a", 26);
+          spawnParticles(c.x, CFG.groundY - CFG.cityH / 2, "#ffc857", 16);
+          sfxExplosion();
+          updateHud();
+          if (state.cities.every((cc) => !cc.alive)) {
+            endGame();
+          }
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // ---------- GAME FLOW ----------
+    function startWave() {
+      state.enemies = [];
+      state.interceptors = [];
+      state.splashes = [];
+      state.activeInterceptors = 0;
+      state.toSpawn = CFG.waveBase + state.wave * CFG.wavePerLevel;
+      state.spawnTimer = 0.4;
+      state.mode = "playing";
+      hideOverlays();
+      updateHud();
+    }
+
+    function startGame() {
+      state.score = 0;
+      state.wave = 1;
+      state.particles = [];
+      state.shake = 0;
+      buildCities();
+      startWave();
+    }
+
+    function nextWave() {
+      const saved = state.cities.filter((c) => c.alive).length;
+      state.score += saved * CFG.citySavePoints;
+      state.wave += 1;
+      state.waveTimer = 2.2;
+      state.mode = "wavebreak";
+      updateHud();
+    }
+
+    function endGame() {
+      state.mode = "gameover";
+      state.shake = 16;
+      saveBest();
+      recordScore(state.score);
+      submitScore((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.score);
+      renderGlobal();
+      sfxExplosion();
+      el.loseText.textContent = `Final score ${state.score} · best ${state.best}. Every city fell on wave ${state.wave}.`;
+      show(el.loseCard);
+    }
+
+    // ---------- INPUT ----------
+    function canvasPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = W / rect.width;
+      const sy = H / rect.height;
+      return {
+        x: (e.clientX - rect.left) * sx,
+        y: (e.clientY - rect.top) * sy,
+      };
+    }
+
+    canvas.addEventListener("pointermove", (e) => {
+      state.aim = canvasPoint(e);
+    });
+
+    canvas.addEventListener("pointerdown", (e) => {
+      ensureAudio();
+      if (state.mode === "menu" || state.mode === "gameover") {
+        startGame();
+        return;
+      }
+      if (state.mode === "playing") {
+        const p = canvasPoint(e);
+        if (p.y < CFG.groundY) fireInterceptor(p);
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        if (state.mode === "menu" || state.mode === "gameover") {
+          ensureAudio();
+          startGame();
+        }
+        return;
+      }
+      if (e.key === "r" || e.key === "R") {
+        if (state.mode !== "menu") { ensureAudio(); startGame(); }
+        return;
+      }
+    });
+
+    el.startBtn.addEventListener("click", () => { ensureAudio(); startGame(); });
+    el.retryBtn.addEventListener("click", () => { ensureAudio(); startGame(); });
+    el.muteBtn.addEventListener("click", toggleMute);
+
+    // ---------- UPDATE ----------
+    function update(dt) {
+      for (const s of state.stars) {
+        s.tw += dt * 1.4;
+      }
+
+      if (state.shake > 0) state.shake = Math.max(0, state.shake - 40 * dt);
+
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.life <= 0) state.particles.splice(i, 1);
+      }
+
+      for (let i = state.splashes.length - 1; i >= 0; i--) {
+        const sp = state.splashes[i];
+        sp.life -= dt;
+        sp.r = Math.min(sp.max, sp.r + sp.max * 4 * dt);
+        if (sp.life <= 0) state.splashes.splice(i, 1);
+      }
+
+      if (state.mode === "wavebreak") {
+        state.waveTimer -= dt;
+        if (state.waveTimer <= 0) startWave();
+        return;
+      }
+
+      if (state.mode !== "playing") return;
+
+      // spawn enemies
+      if (state.toSpawn > 0) {
+        state.spawnTimer -= dt;
+        if (state.spawnTimer <= 0) {
+          const burst = Math.random() < 0.3 ? Math.floor(rand(1, 3 + state.wave * 0.4)) : 1;
+          for (let i = 0; i < burst && state.toSpawn > 0; i++) {
+            spawnEnemy();
+            state.toSpawn -= 1;
+          }
+          state.spawnTimer = Math.max(0.35, CFG.spawnIntervalBase - state.wave * 0.06) * rand(0.7, 1.3);
+        }
+      }
+
+      // enemies fall from the top toward their ground target
+      for (let i = state.enemies.length - 1; i >= 0; i--) {
+        const m = state.enemies[i];
+        m.x += m.vx * dt;
+        m.y += m.vy * dt;
+
+        if (m.y >= m.ty - 2) {
+          state.enemies.splice(i, 1);
+          hitCity(m.tx, m.ty);
+          if (state.mode !== "playing") return;
+        }
+      }
+
+      // interceptors: movement + collisions
+      for (let i = state.interceptors.length - 1; i >= 0; i--) {
+        const it = state.interceptors[i];
+        it.traveled += CFG.interceptorSpeed * dt;
+        const t = Math.min(1, it.traveled / it.dist);
+        it.x = it.ox + ( (it.tx - it.ox) ) * t;
+        it.y = it.oy + ( (it.ty - it.oy) ) * t;
+
+        let destroyed = false;
+
+        // hit enemy
+        for (let j = state.enemies.length - 1; j >= 0; j--) {
+          const m = state.enemies[j];
+          if (dist(it, m) < 16) {
+            state.enemies.splice(j, 1);
+            makeSplash(m.x, m.y, "#4de1c1", CFG.crossR);
+            state.score += CFG.killPoints;
+            spawnParticles(m.x, m.y, "#4de1c1", 14, 200);
+            sfxImpact();
+            destroyed = true;
+            break;
+          }
+        }
+
+        // hit own splash
+        if (!destroyed) {
+          for (let j = state.splashes.length - 1; j >= 0; j--) {
+            const sp = state.splashes[j];
+            if (dist(it, sp) < sp.r) {
+              destroyed = true;
+              break;
+            }
+          }
+        }
+
+        if (destroyed || t >= 1) {
+          state.interceptors.splice(i, 1);
+          state.activeInterceptors -= 1;
+          if (t >= 1 && !destroyed) makeSplash(it.x, it.y, "#7c6cff", CFG.splashR);
+        }
+      }
+
+      // enemy hits splash
+      for (let i = state.enemies.length - 1; i >= 0; i--) {
+        const m = state.enemies[i];
+        for (let j = state.splashes.length - 1; j >= 0; j--) {
+          const sp = state.splashes[j];
+          if (dist(m, sp) < sp.r) {
+            state.enemies.splice(i, 1);
+            state.splashes.splice(j, 1);
+            state.score += CFG.killPoints;
+            spawnParticles(sp.x, sp.y, "#ffc857", 12, 180);
+            sfxImpact();
+            break;
+          }
+        }
+      }
+
+      updateHud();
+
+      // wave complete
+      if (state.toSpawn === 0 && state.enemies.length === 0 && state.mode === "playing") {
+        nextWave();
+      }
+    }
+
+    // ---------- RENDER ----------
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#0a1020");
+      g.addColorStop(0.55, "#070b14");
+      g.addColorStop(1, "#04060c");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      for (const s of state.stars) {
+        const a = 0.2 + 0.4 * (0.5 + 0.5 * Math.sin(s.tw));
+        ctx.globalAlpha = a;
+        ctx.fillStyle = "#8b97b3";
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.z * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawCities() {
+      for (const c of state.cities) {
+        const x = c.x - CFG.cityW / 2;
+        const y = CFG.groundY - CFG.cityH;
+        if (c.alive) {
+          c.glow += 0.02;
+          ctx.shadowColor = "#4de1c1";
+          ctx.shadowBlur = 12 + 6 * Math.sin(c.glow);
+          const g = ctx.createLinearGradient(x, y, x, y + CFG.cityH);
+          g.addColorStop(0, "#4de1c1");
+          g.addColorStop(1, "#1f6f66");
+          ctx.fillStyle = g;
+          ctx.fillRect(x, y + 8, CFG.cityW, CFG.cityH - 8);
+          ctx.fillStyle = "#7c6cff";
+          ctx.fillRect(x + 6, y + 2, CFG.cityW - 12, 8);
+          ctx.fillStyle = "rgba(232, 238, 252, 0.85)";
+          for (let wx = 8; wx < CFG.cityW - 8; wx += 10) {
+            for (let wy = 14; wy < CFG.cityH - 6; wy += 9) {
+              ctx.fillRect(x + wx, y + wy, 3, 3);
+            }
+          }
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.fillStyle = "rgba(139, 151, 179, 0.18)";
+          ctx.fillRect(x, y + CFG.cityH - 8, CFG.cityW, 8);
+          ctx.fillStyle = "rgba(255, 92, 122, 0.25)";
+          ctx.fillRect(x + 4, y + CFG.cityH - 12, CFG.cityW - 8, 4);
+        }
+      }
+
+      // ground line
+      ctx.strokeStyle = "rgba(77, 225, 193, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, CFG.groundY);
+      ctx.lineTo(W, CFG.groundY);
+      ctx.stroke();
+    }
+
+    function drawMissiles() {
+      // enemy trails (straight lines from the top source to the warhead)
+      for (const m of state.enemies) {
+        ctx.strokeStyle = "rgba(255, 92, 122, 0.75)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(m.sx, m.sy);
+        ctx.lineTo(m.x, m.y);
+        ctx.stroke();
+        ctx.fillStyle = "#ff5c7a";
+        ctx.shadowColor = "#ff5c7a";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // interceptors
+      for (const it of state.interceptors) {
+        const a = Math.atan2(it.ty - it.oy, it.tx - it.ox);
+        ctx.strokeStyle = "#4de1c1";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#4de1c1";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(it.x, it.y);
+        ctx.lineTo(it.x - Math.cos(a) * 14, it.y - Math.sin(a) * 14);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function drawSplashes() {
+      for (const sp of state.splashes) {
+        const a = Math.max(0, sp.life / 0.9);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = sp.color;
+        ctx.shadowColor = sp.color;
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function drawAim() {
+      if (state.mode !== "playing") return;
+      const { x, y } = state.aim;
+      ctx.strokeStyle = "rgba(77, 225, 193, 0.5)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 12, y);
+      ctx.lineTo(x + 12, y);
+      ctx.moveTo(x, y - 12);
+      ctx.lineTo(x, y + 12);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.stroke();
+      // silo marker
+      ctx.fillStyle = "rgba(77, 225, 193, 0.8)";
+      ctx.beginPath();
+      ctx.arc(W / 2, CFG.groundY, 6, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(77, 225, 193, 0.6)";
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(W / 2, CFG.groundY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawParticles() {
+      for (const p of state.particles) {
+        ctx.globalAlpha = Math.max(0, p.life / p.max);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawWaveBreak() {
+      if (state.mode !== "wavebreak") return;
+      ctx.fillStyle = "rgba(10, 14, 26, 0.55)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#4de1c1";
+      ctx.font = "700 34px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("WAVE " + state.wave, W / 2, H / 2 - 12);
+      ctx.fillStyle = "rgba(139, 151, 179, 0.85)";
+      ctx.font = "600 16px system-ui, sans-serif";
+      ctx.fillText("cities saved bank " + CFG.citySavePoints + " pts", W / 2, H / 2 + 22);
+    }
+
+    function draw() {
+      ctx.save();
+      if (state.shake > 0) {
+        const m = state.shake;
+        ctx.translate(rand(-m, m), rand(-m, m));
+      }
+
+      drawBackground();
+      drawCities();
+      drawMissiles();
+      drawSplashes();
+      drawParticles();
+      drawAim();
+      drawWaveBreak();
+
+      const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75);
+      vig.addColorStop(0, "transparent");
+      vig.addColorStop(1, "rgba(0,0,0,0.35)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.restore();
+    }
+
+    // ---------- LOOP ----------
+    function loop(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      let dt = (ts - state.lastTs) / 1000;
+      state.lastTs = ts;
+      dt = Math.min(dt, 0.033);
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // boot
+    initStars();
+    buildCities();
+    initNameInput();
+    renderScores();
+    renderGlobal();
+    updateHud();
+    show(el.startCard);
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>

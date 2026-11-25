@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Minesweeper — NTCHELP</title>
+  <style>
+    :root {
+      --bg: #070a12;
+      --panel: #0f1524;
+      --text: #e8eefc;
+      --muted: #8b97b3;
+      --accent: #4de1c1;
+      --accent-2: #7c6cff;
+      --danger: #ff5c7a;
+      --warn: #ffc857;
+      --border: #243049;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: radial-gradient(1200px 700px at 50% -10%, #152040 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .shell {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 12px 14px 16px;
+      gap: 10px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 16px;
+    }
+
+    .title-block h1 {
+      font-size: 1.15rem;
+      letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    .title-block p {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 2px;
+    }
+
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .stat {
+      min-width: 78px;
+      background: rgba(15, 21, 36, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    .stat .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat .value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--accent);
+    }
+
+    .btn-mute {
+      min-width: 92px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+
+    .btn-mute:hover { border-color: var(--accent); color: var(--accent); }
+
+    .stage-wrap {
+      position: relative;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game {
+      width: min(100%, 920px);
+      height: 100%;
+      max-height: 100%;
+      display: block;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #050812;
+      box-shadow:
+        0 0 0 1px rgba(77, 225, 193, 0.08),
+        0 20px 50px rgba(0, 0, 0, 0.45),
+        inset 0 0 80px rgba(80, 120, 255, 0.08);
+      touch-action: none;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .overlay-card {
+      pointer-events: auto;
+      width: min(420px, calc(100% - 28px));
+      background: rgba(10, 14, 26, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 20px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .overlay-card h2 {
+      font-size: 1.45rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .overlay-card p {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .overlay-card.hidden { display: none; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+
+    button:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3fd6b5, #5b6dff);
+      color: #061018;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .score-name-input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      background: rgba(15, 21, 36, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .score-name-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .top-scores {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .top-scores h3 {
+      color: var(--accent);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .top-scores .score-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .top-scores .score-row .rank {
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 24px;
+    }
+
+    .top-scores .score-row .name {
+      flex: 1;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .top-scores .score-row .pts {
+      font-weight: 600;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .top-scores .no-scores {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px 16px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    footer kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 0.74rem;
+    }
+
+    @media (max-width: 640px) {
+      .title-block h1 { font-size: 1rem; }
+      .stat { min-width: 64px; padding: 5px 8px; }
+      .stat .value { font-size: 0.95rem; }
+      footer { justify-content: center; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="title-block">
+        <h1>MINESWEEPER</h1>
+        <p><a href="/" style="color:var(--muted)">← Home</a> · 9×9 field · 12 mines · beat the clock</p>
+      </div>
+      <div class="hud">
+        <div class="stat"><span class="label">Time</span><span class="value" id="timer">00:00</span></div>
+        <div class="stat"><span class="label">Mines</span><span class="value" id="mines">12</span></div>
+        <div class="stat"><span class="label">Best</span><span class="value" id="best">—</span></div>
+        <button class="btn-mute" id="muteBtn" type="button">Sound: on</button>
+      </div>
+    </header>
+
+    <div class="stage-wrap">
+      <canvas id="game" width="900" height="600" aria-label="Minesweeper game canvas"></canvas>
+      <div class="overlay">
+        <div class="overlay-card" id="startCard">
+          <h2>Minesweeper</h2>
+          <p>
+            Clear all safe cells to win — <strong>12</strong> mines are hidden in a <strong>9×9</strong> field.
+            Left-click / tap to reveal, right-click / long-press to flag. The timer starts on your first reveal.
+            Clear time is recorded — fastest wins.
+          </p>
+          <input class="score-name-input" id="nameInput" type="text" maxlength="12" placeholder="Callsign" aria-label="Player name">
+          <div class="top-scores" id="startScores"></div>
+          <div class="top-scores" id="startGlobal"></div>
+          <div class="actions">
+            <button class="btn-primary" id="startBtn" type="button">Deploy</button>
+          </div>
+        </div>
+        <div class="overlay-card hidden" id="loseCard">
+          <h2>Detonation</h2>
+          <p id="loseText">A mine got you.</p>
+          <div class="top-scores" id="loseScores"></div>
+          <div class="top-scores" id="loseGlobal"></div>
+          <div class="actions">
+            <button class="btn-primary" id="retryBtn" type="button">Redeploy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span><kbd>Click</kbd>/<kbd>Tap</kbd> reveal · <kbd>Right-click</kbd>/<kbd>Long-press</kbd> flag · <kbd>R</kbd> restart · <kbd>Enter</kbd> start</span>
+      <span>Fastest clears stored in this browser</span>
+    </footer>
+  </div>
+
+  <script>
+  (() => {
+    // ---------- CONFIG ----------
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const STORAGE_KEY = "ntchelp.minesweeper.best";
+    const STORAGE_KEY_LIST = "ntchelp.minesweeper.scores";
+    const STORAGE_KEY_NAME = "ntchelp.minesweeper.name";
+    const SUPABASE_URL = "https://lhksmttjpytpvtdebh.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_o6Nr6Spprt52QxK8VjkEYA_2RezYxrt";
+
+    const CFG = {
+      rows: 9,
+      cols: 9,
+      mines: 12,
+      cell: 58,
+      gap: 4,
+    };
+
+    const boardW = CFG.cols * (CFG.cell + CFG.gap) - CFG.gap;
+    const boardH = CFG.rows * (CFG.cell + CFG.gap) - CFG.gap;
+    const boardOX = Math.floor((W - boardW) / 2);
+    const boardOY = Math.floor((H - boardH) / 2);
+
+    const NUM_COLORS = ["", "#4de1c1", "#7c6cff", "#ffc857", "#ff5c7a", "#ff8f5c", "#5b6dff", "#e8eefc", "#8b97b3"];
+
+    const el = {
+      timer: document.getElementById("timer"),
+      mines: document.getElementById("mines"),
+      best: document.getElementById("best"),
+      startCard: document.getElementById("startCard"),
+      loseCard: document.getElementById("loseCard"),
+      loseText: document.getElementById("loseText"),
+      startBtn: document.getElementById("startBtn"),
+      retryBtn: document.getElementById("retryBtn"),
+      muteBtn: document.getElementById("muteBtn"),
+      nameInput: document.getElementById("nameInput"),
+      startScores: document.getElementById("startScores"),
+      loseScores: document.getElementById("loseScores"),
+      startGlobal: document.getElementById("startGlobal"),
+      loseGlobal: document.getElementById("loseGlobal"),
+    };
+
+    // ---------- STATE ----------
+    const state = {
+      mode: "menu", // menu | playing | gameover
+      grid: [],
+      time: 0,
+      started: false,
+      revealedCount: 0,
+      flagsPlaced: 0,
+      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      boom: null,
+      particles: [],
+      shake: 0,
+      lastTs: 0,
+    };
+
+    // ---------- AUDIO ----------
+    const audio = {
+      ctx: null,
+      master: null,
+      muted: false,
+      lastReveal: 0,
+    };
+
+    function ensureAudio() {
+      if (audio.ctx) {
+        if (audio.ctx.state === "suspended") audio.ctx.resume();
+        return audio.ctx;
+      }
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audio.ctx = new AC();
+      audio.master = audio.ctx.createGain();
+      audio.master.gain.value = audio.muted ? 0 : 0.22;
+      audio.master.connect(audio.ctx.destination);
+      return audio.ctx;
+    }
+
+    function playTone({ type = "sine", freq = 440, dur = 0.08, gain = 0.15, slide = 0, delay = 0 }) {
+      const actx = ensureAudio();
+      if (!actx || !audio.master || audio.muted) return;
+      const t0 = actx.currentTime + delay;
+      const osc = actx.createOscillator();
+      const g = actx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (slide) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t0 + dur);
+      }
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(audio.master);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    }
+
+    function playNoiseBurst({ dur = 0.3, gain = 0.15, freq = 400 }) {
+      const actx = ensureAudio();
+      if (!actx || !audio.master || audio.muted) return;
+      const n = Math.max(1, Math.floor(actx.sampleRate * dur));
+      const buf = actx.createBuffer(1, n, actx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) {
+        const env = 1 - i / n;
+        data[i] = (Math.random() * 2 - 1) * env * env;
+      }
+      const src = actx.createBufferSource();
+      src.buffer = buf;
+      const filter = actx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = freq;
+      const g = actx.createGain();
+      const t0 = actx.currentTime;
+      g.gain.setValueAtTime(gain, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(audio.master);
+      src.start(t0);
+      src.stop(t0 + dur + 0.02);
+    }
+
+    function sfxReveal() {
+      const now = performance.now();
+      if (now - audio.lastReveal < 45) return;
+      audio.lastReveal = now;
+      playTone({ type: "triangle", freq: 520, dur: 0.045, gain: 0.06, slide: 120 });
+    }
+
+    function sfxFlag() {
+      playTone({ type: "square", freq: 280, dur: 0.05, gain: 0.07 });
+    }
+
+    function sfxBoom() {
+      playNoiseBurst({ dur: 0.6, gain: 0.24, freq: 220 });
+      playTone({ type: "sawtooth", freq: 140, dur: 0.55, gain: 0.14, slide: -90 });
+      playTone({ type: "sine", freq: 70, dur: 0.5, gain: 0.14, slide: -30 });
+    }
+
+    function sfxWin() {
+      playTone({ type: "sine", freq: 523, dur: 0.12, gain: 0.1 });
+      playTone({ type: "sine", freq: 659, dur: 0.12, gain: 0.1, delay: 0.1 });
+      playTone({ type: "sine", freq: 784, dur: 0.12, gain: 0.1, delay: 0.2 });
+      playTone({ type: "sine", freq: 1047, dur: 0.22, gain: 0.11, delay: 0.3 });
+    }
+
+    function toggleMute() {
+      ensureAudio();
+      audio.muted = !audio.muted;
+      if (audio.master) audio.master.gain.value = audio.muted ? 0 : 0.22;
+      el.muteBtn.textContent = audio.muted ? "Sound: off" : "Sound: on";
+    }
+
+    // ---------- HELPERS ----------
+    function rand(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function show(card) {
+      for (const c of [el.startCard, el.loseCard]) c.classList.toggle("hidden", c !== card);
+    }
+
+    function hideOverlays() {
+      for (const c of [el.startCard, el.loseCard]) c.classList.add("hidden");
+    }
+
+    function fmtTime(sec) {
+      const s = Math.floor(sec);
+      const mm = Math.floor(s / 60);
+      const ss = s % 60;
+      return String(mm).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+    }
+
+    function updateHud() {
+      el.timer.textContent = fmtTime(state.time);
+      el.mines.textContent = String(CFG.mines - state.flagsPlaced);
+      el.best.textContent = state.best > 0 ? fmtTime(state.best) : "—";
+    }
+
+    function saveBest() {
+      if (state.best === 0 || state.time < state.best) {
+        state.best = state.time;
+        localStorage.setItem(STORAGE_KEY, String(state.best));
+      }
+      updateHud();
+    }
+
+    // ---------- SCORES LIST ----------
+    function loadName() {
+      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+    }
+
+    function saveName(name) {
+      localStorage.setItem(STORAGE_KEY_NAME, name);
+    }
+
+    function loadScores() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveScores(list) {
+      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+    }
+
+    function recordScore(score) {
+      const name = (el.nameInput.value || "").trim().slice(0, 12) || "Player";
+      const list = loadScores();
+      list.push({ name, score });
+      list.sort((a, b) => a.score - b.score);
+      const top = list.slice(0, 5);
+      saveScores(top);
+      renderScores();
+    }
+
+    function renderScores() {
+      const list = loadScores();
+      for (const container of [el.startScores, el.loseScores]) {
+        container.textContent = "";
+        const h3 = document.createElement("h3");
+        h3.textContent = "Top Times";
+        container.appendChild(h3);
+        if (list.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "no-scores";
+          empty.textContent = "No times yet — be the first!";
+          container.appendChild(empty);
+        } else {
+          list.forEach((entry, i) => {
+            const row = document.createElement("div");
+            row.className = "score-row";
+            const rank = document.createElement("span");
+            rank.className = "rank";
+            rank.textContent = String(i + 1);
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = entry.name;
+            const pts = document.createElement("span");
+            pts.className = "pts";
+            pts.textContent = fmtTime(entry.score);
+            row.appendChild(rank);
+            row.appendChild(name);
+            row.appendChild(pts);
+            container.appendChild(row);
+          });
+        }
+      }
+    }
+
+    // ---------- GLOBAL (Supabase) LEADERBOARD ----------
+    async function loadGlobalScores() {
+      try {
+        const r = await fetch(SUPABASE_URL + "/rest/v1/scores?select=name,score&order=score.asc&limit=5", { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY } });
+        if (!r.ok) return [];
+        const rows = await r.json();
+        return Array.isArray(rows) ? rows.slice(0, 5) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function submitScore(name, score) {
+      try {
+        fetch(SUPABASE_URL + "/rest/v1/scores", {
+          method: "POST",
+          headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimum" },
+          body: JSON.stringify({ name: String(name || "Player").slice(0, 12), score: Math.max(0, Number(score) || 0) })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    function renderGlobal() {
+      const paint = (list) => {
+        for (const container of [el.startGlobal, el.loseGlobal]) {
+          container.textContent = "";
+          const h3 = document.createElement("h3");
+          h3.textContent = "Global Top 5";
+          container.appendChild(h3);
+          if (!list || list.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "no-scores";
+            empty.textContent = "Loading global scores…";
+            container.appendChild(empty);
+          } else {
+            list.forEach((entry, i) => {
+              const row = document.createElement("div");
+              row.className = "score-row";
+              const rank = document.createElement("span");
+              rank.className = "rank";
+              rank.textContent = String(i + 1);
+              const name = document.createElement("span");
+              name.className = "name";
+              name.textContent = String(entry.name || "Player").slice(0, 12);
+              const pts = document.createElement("span");
+              pts.className = "pts";
+              pts.textContent = fmtTime(entry.score);
+              row.appendChild(rank);
+              row.appendChild(name);
+              row.appendChild(pts);
+              container.appendChild(row);
+            });
+          }
+        }
+      };
+      paint([]);
+      loadGlobalScores().then(paint).catch(() => {});
+    }
+
+    function initNameInput() {
+      el.nameInput.value = loadName();
+      el.nameInput.addEventListener("input", () => {
+        const v = el.nameInput.value.trim().slice(0, 12);
+        saveName(v || "Player");
+      });
+    }
+
+    // ---------- ENTITIES ----------
+    function newGrid() {
+      const g = [];
+      for (let r = 0; r < CFG.rows; r++) {
+        const row = [];
+        for (let c = 0; c < CFG.cols; c++) {
+          row.push({ mine: false, revealed: false, flagged: false, count: 0 });
+        }
+        g.push(row);
+      }
+      return g;
+    }
+
+    function placeMines(safeR, safeC) {
+      let placed = 0;
+      while (placed < CFG.mines) {
+        const r = Math.floor(Math.random() * CFG.rows);
+        const c = Math.floor(Math.random() * CFG.cols);
+        if (state.grid[r][c].mine) continue;
+        if (Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue;
+        state.grid[r][c].mine = true;
+        placed += 1;
+      }
+      for (let r = 0; r < CFG.rows; r++) {
+        for (let c = 0; c < CFG.cols; c++) {
+          if (state.grid[r][c].mine) continue;
+          let n = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const rr = r + dr;
+              const cc = c + dc;
+              if (rr >= 0 && rr < CFG.rows && cc >= 0 && cc < CFG.cols && state.grid[rr][cc].mine) n += 1;
+            }
+          }
+          state.grid[r][c].count = n;
+        }
+      }
+    }
+
+    function cellCenter(r, c) {
+      return {
+        x: boardOX + c * (CFG.cell + CFG.gap) + CFG.cell / 2,
+        y: boardOY + r * (CFG.cell + CFG.gap) + CFG.cell / 2,
+      };
+    }
+
+    function spawnParticles(x, y, color, n) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = rand(50, 320);
+        state.particles.push({
+          x, y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          life: rand(0.4, 1),
+          max: 1,
+          r: rand(2, 5),
+          color,
+        });
+      }
+    }
+
+    function floodReveal(r, c) {
+      const stack = [[r, c]];
+      while (stack.length) {
+        const [cr, cc] = stack.pop();
+        const cell = state.grid[cr][cc];
+        if (cell.revealed || cell.flagged) continue;
+        cell.revealed = true;
+        state.revealedCount += 1;
+        if (cell.count === 0 && !cell.mine) {
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const rr = cr + dr;
+              const cc = cc + dc;
+              if (rr >= 0 && rr < CFG.rows && cc >= 0 && cc < CFG.cols && !state.grid[rr][cc].revealed && !state.grid[rr][cc].flagged) {
+                stack.push([rr, cc]);
+              }
+            }
+          }
+        }
+      }
+      sfxReveal();
+      checkWin();
+    }
+
+    function checkWin() {
+      const total = CFG.rows * CFG.cols;
+      if (state.revealedCount === total - CFG.mines) {
+        state.mode = "gameover";
+        saveBest();
+        recordScore(state.time);
+        submitScore((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.time);
+        renderGlobal();
+        sfxWin();
+        el.loseText.textContent = `Cleared in ${fmtTime(state.time)}! All mines dodged.`;
+        show(el.loseCard);
+      }
+    }
+
+    function reveal(r, c) {
+      if (state.mode !== "playing") return;
+      const cell = state.grid[r][c];
+      if (cell.revealed || cell.flagged) return;
+      if (!state.started) {
+        state.started = true;
+        placeMines(r, c);
+      }
+      if (cell.mine) {
+        state.mode = "gameover";
+        state.boom = { r, c };
+        state.shake = 16;
+        const pos = cellCenter(r, c);
+        spawnParticles(pos.x, pos.y, "#ff5c7a", 30);
+        spawnParticles(pos.x, pos.y, "#ffc857", 22);
+        sfxBoom();
+        el.loseText.textContent = `Boom at ${fmtTime(state.time)} — a mine got you.`;
+        show(el.loseCard);
+        return;
+      }
+      floodReveal(r, c);
+      updateHud();
+    }
+
+    function toggleFlag(r, c) {
+      if (state.mode !== "playing") return;
+      const cell = state.grid[r][c];
+      if (cell.revealed) return;
+      cell.flagged = !cell.flagged;
+      state.flagsPlaced += cell.flagged ? 1 : -1;
+      sfxFlag();
+      updateHud();
+    }
+
+    // ---------- GAME FLOW ----------
+    function startGame() {
+      state.grid = newGrid();
+      state.time = 0;
+      state.started = false;
+      state.revealedCount = 0;
+      state.flagsPlaced = 0;
+      state.boom = null;
+      state.particles = [];
+      state.shake = 0;
+      state.mode = "playing";
+      hideOverlays();
+      updateHud();
+    }
+
+    // ---------- INPUT ----------
+    function pointerCell(e) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = W / rect.width;
+      const sy = H / rect.height;
+      const px = (e.clientX - rect.left) * sx;
+      const py = (e.clientY - rect.top) * sy;
+      const c = Math.floor((px - boardOX) / (CFG.cell + CFG.gap));
+      const r = Math.floor((py - boardOY) / (CFG.cell + CFG.gap));
+      if (c < 0 || c >= CFG.cols || r < 0 || r >= CFG.rows) return null;
+      return { r, c };
+    }
+
+    let longPressTimer = null;
+    let longPressFired = false;
+
+    canvas.addEventListener("pointerdown", (e) => {
+      ensureAudio();
+      if (state.mode === "menu" || state.mode === "gameover") {
+        startGame();
+        return;
+      }
+      const hit = pointerCell(e);
+      if (!hit) return;
+      longPressFired = false;
+      longPressTimer = setTimeout(() => {
+        longPressFired = true;
+        toggleFlag(hit.r, hit.c);
+      }, 420);
+    });
+
+    canvas.addEventListener("pointerup", (e) => {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      if (longPressFired) { longPressFired = false; return; }
+      const hit = pointerCell(e);
+      if (hit) reveal(hit.r, hit.c);
+    });
+
+    canvas.addEventListener("pointercancel", () => {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+
+    canvas.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      const hit = pointerCell(e);
+      if (hit) toggleFlag(hit.r, hit.c);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        if (state.mode === "menu" || state.mode === "gameover") {
+          ensureAudio();
+          startGame();
+        }
+        return;
+      }
+      if (e.key === "r" || e.key === "R") {
+        if (state.mode !== "menu") { ensureAudio(); startGame(); }
+        return;
+      }
+    });
+
+    el.startBtn.addEventListener("click", () => { ensureAudio(); startGame(); });
+    el.retryBtn.addEventListener("click", () => { ensureAudio(); startGame(); });
+    el.muteBtn.addEventListener("click", toggleMute);
+
+    // ---------- UPDATE ----------
+    function update(dt) {
+      if (state.mode === "playing" && state.started) {
+        state.time += dt;
+        updateHud();
+      }
+
+      if (state.shake > 0) state.shake = Math.max(0, state.shake - 40 * dt);
+
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.life <= 0) state.particles.splice(i, 1);
+      }
+    }
+
+    // ---------- RENDER ----------
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#0a1020");
+      g.addColorStop(0.55, "#070b14");
+      g.addColorStop(1, "#04060c");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawBoard() {
+      for (let r = 0; r < CFG.rows; r++) {
+        for (let c = 0; c < CFG.cols; c++) {
+          const x = boardOX + c * (CFG.cell + CFG.gap);
+          const y = boardOY + r * (CFG.cell + CFG.gap);
+          const cell = state.grid[r][c];
+
+          if (cell.revealed) {
+            ctx.fillStyle = "rgba(15, 21, 36, 0.9)";
+            roundRect(x, y, CFG.cell, CFG.cell, 10);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(36, 48, 73, 0.9)";
+            ctx.lineWidth = 1;
+            roundRect(x, y, CFG.cell, CFG.cell, 10);
+            ctx.stroke();
+            if (cell.count > 0) {
+              ctx.fillStyle = NUM_COLORS[cell.count];
+              ctx.font = "700 26px system-ui, sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(String(cell.count), x + CFG.cell / 2, y + CFG.cell / 2 + 1);
+            }
+          } else {
+            const g = ctx.createLinearGradient(x, y, x + CFG.cell, y + CFG.cell);
+            g.addColorStop(0, "#1c2743");
+            g.addColorStop(1, "#121b30");
+            ctx.fillStyle = g;
+            roundRect(x, y, CFG.cell, CFG.cell, 10);
+            ctx.fill();
+            ctx.strokeStyle = cell === mineHighlight ? "#ff5c7a" : "rgba(124, 108, 255, 0.5)";
+            ctx.lineWidth = 1.5;
+            roundRect(x, y, CFG.cell, CFG.cell, 10);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(139, 151, 179, 0.25)";
+            ctx.beginPath();
+            ctx.arc(x + CFG.cell / 2, y + CFG.cell / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          if (cell.flagged && !cell.revealed) {
+            const cx = x + CFG.cell / 2;
+            const cy = y + CFG.cell / 2;
+            ctx.fillStyle = "#ff5c7a";
+            ctx.beginPath();
+            ctx.moveTo(cx - 2, cy - 14);
+            ctx.lineTo(cx - 2, cy + 14);
+            ctx.lineTo(cx + 2, cy + 14);
+            ctx.lineTo(cx + 2, cy - 14);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#ff5c7a";
+            ctx.beginPath();
+            ctx.moveTo(cx + 2, cy - 14);
+            ctx.lineTo(cx + 16, cy - 7);
+            ctx.lineTo(cx + 2, cy);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#ffc857";
+            ctx.beginPath();
+            ctx.arc(cx - 4, cy - 16, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      if (state.boom) {
+        const pos = cellCenter(state.boom.r, state.boom.c);
+        const cx = boardOX + state.boom.c * (CFG.cell + CFG.gap);
+        const cy = boardOY + state.boom.r * (CFG.cell + CFG.gap);
+        ctx.fillStyle = "#ff5c7a";
+        roundRect(cx, cy, CFG.cell, CFG.cell, 10);
+        ctx.fill();
+        ctx.fillStyle = "#ffc857";
+        ctx.font = "700 30px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("✸", pos.x, pos.y);
+      }
+    }
+
+    let mineHighlight = null;
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawParticles() {
+      for (const p of state.particles) {
+        ctx.globalAlpha = Math.max(0, p.life / p.max);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      ctx.save();
+      if (state.shake > 0) {
+        const m = state.shake;
+        ctx.translate(rand(-m, m), rand(-m, m));
+      }
+
+      drawBackground();
+
+      if (state.mode !== "menu") {
+        drawBoard();
+      } else {
+        ctx.fillStyle = "rgba(139, 151, 179, 0.7)";
+        ctx.font = "600 20px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("9×9 field · 12 mines · beat the clock", W / 2, H / 2);
+      }
+
+      drawParticles();
+
+      const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75);
+      vig.addColorStop(0, "transparent");
+      vig.addColorStop(1, "rgba(0,0,0,0.35)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.restore();
+    }
+
+    // ---------- LOOP ----------
+    function loop(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      let dt = (ts - state.lastTs) / 1000;
+      state.lastTs = ts;
+      dt = Math.min(dt, 0.033);
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // boot
+    state.grid = newGrid();
+    initNameInput();
+    renderScores();
+    renderGlobal();
+    updateHud();
+    show(el.startCard);
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
