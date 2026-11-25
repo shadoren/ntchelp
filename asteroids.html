@@ -203,6 +203,69 @@
       color: var(--accent);
     }
 
+    .score-name-input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      background: rgba(15, 21, 36, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .score-name-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .top-scores {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .top-scores h3 {
+      color: var(--accent);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .top-scores .score-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .top-scores .score-row .rank {
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 24px;
+    }
+
+    .top-scores .score-row .name {
+      flex: 1;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .top-scores .score-row .pts {
+      font-weight: 600;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .top-scores .no-scores {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
     footer {
       display: flex;
       flex-wrap: wrap;
@@ -299,6 +362,8 @@
             <kbd>↑</kbd> / <kbd>W</kbd> thrust, <kbd>Space</kbd> fire.
             Press <kbd>Enter</kbd> or tap to start.
           </p>
+          <input class="score-name-input" id="nameInput" type="text" maxlength="12" placeholder="Callsign" aria-label="Player name">
+          <div class="top-scores" id="startScores"></div>
           <div class="actions">
             <button class="btn-primary" id="startBtn" type="button">Launch ship</button>
           </div>
@@ -306,6 +371,7 @@
         <div class="overlay-card hidden" id="loseCard">
           <h2>Hull breach</h2>
           <p id="loseText">Mission failed.</p>
+          <div class="top-scores" id="loseScores"></div>
           <div class="actions">
             <button class="btn-primary" id="retryBtn" type="button">Retry</button>
           </div>
@@ -335,7 +401,26 @@
     const W = canvas.width;
     const H = canvas.height;
 
+    const el = {
+      score: document.getElementById("score"),
+      lives: document.getElementById("lives"),
+      wave: document.getElementById("wave"),
+      best: document.getElementById("best"),
+      startCard: document.getElementById("startCard"),
+      loseCard: document.getElementById("loseCard"),
+      loseText: document.getElementById("loseText"),
+      startBtn: document.getElementById("startBtn"),
+      retryBtn: document.getElementById("retryBtn"),
+      muteBtn: document.getElementById("muteBtn"),
+      touchControls: document.getElementById("touchControls"),
+      nameInput: document.getElementById("nameInput"),
+      startScores: document.getElementById("startScores"),
+      loseScores: document.getElementById("loseScores"),
+    };
+
     const STORAGE_KEY = "ntchelp.asteroids.best";
+    const STORAGE_KEY_LIST = "ntchelp.asteroids.scores";
+    const STORAGE_KEY_NAME = "ntchelp.asteroids.name";
 
     const CFG = {
       ship: {
@@ -361,20 +446,6 @@
       },
       extraLifeEvery: 10000,
       waveBonus: 50,        // * wave number, awarded on clear
-    };
-
-    const el = {
-      score: document.getElementById("score"),
-      lives: document.getElementById("lives"),
-      wave: document.getElementById("wave"),
-      best: document.getElementById("best"),
-      startCard: document.getElementById("startCard"),
-      loseCard: document.getElementById("loseCard"),
-      loseText: document.getElementById("loseText"),
-      startBtn: document.getElementById("startBtn"),
-      retryBtn: document.getElementById("retryBtn"),
-      muteBtn: document.getElementById("muteBtn"),
-      touchControls: document.getElementById("touchControls"),
     };
 
     // ---------- STATE ----------
@@ -556,6 +627,81 @@
       updateHud();
     }
 
+    // ---------- SCORES LIST ----------
+    function loadName() {
+      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+    }
+
+    function saveName(name) {
+      localStorage.setItem(STORAGE_KEY_NAME, name);
+    }
+
+    function loadScores() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveScores(list) {
+      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+    }
+
+    function recordScore(score) {
+      const name = (el.nameInput.value || "").trim().slice(0, 12) || "Player";
+      const list = loadScores();
+      list.push({ name, score });
+      list.sort((a, b) => b.score - a.score);
+      const top = list.slice(0, 5);
+      saveScores(top);
+      renderScores();
+    }
+
+    function renderScores() {
+      const list = loadScores();
+      for (const container of [el.startScores, el.loseScores]) {
+        container.textContent = "";
+        const h3 = document.createElement("h3");
+        h3.textContent = "Top Scores";
+        container.appendChild(h3);
+        if (list.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "no-scores";
+          empty.textContent = "No scores yet — be the first!";
+          container.appendChild(empty);
+        } else {
+          list.forEach((entry, i) => {
+            const row = document.createElement("div");
+            row.className = "score-row";
+            const rank = document.createElement("span");
+            rank.className = "rank";
+            rank.textContent = String(i + 1);
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = entry.name;
+            const pts = document.createElement("span");
+            pts.className = "pts";
+            pts.textContent = String(entry.score);
+            row.appendChild(rank);
+            row.appendChild(name);
+            row.appendChild(pts);
+            container.appendChild(row);
+          });
+        }
+      }
+    }
+
+    function initNameInput() {
+      el.nameInput.value = loadName();
+      el.nameInput.addEventListener("input", () => {
+        const v = el.nameInput.value.trim().slice(0, 12);
+        saveName(v || "Player");
+      });
+    }
+
     function addScore(n) {
       state.score += n;
       if (state.score >= state.nextExtraLife) {
@@ -706,6 +852,7 @@
         state.mode = "gameover";
         thrustStop();
         saveBest();
+        recordScore(state.score);
         el.loseText.textContent = `Final score ${state.score} · wave ${state.wave} · best ${state.best}.`;
         show(el.loseCard);
       } else {
@@ -1045,6 +1192,8 @@
     state.ship = createShip();
     state.ship.alive = false;
     spawnWave();
+    initNameInput();
+    renderScores();
     updateHud();
     show(el.startCard);
     requestAnimationFrame(loop);

@@ -201,6 +201,69 @@
       color: var(--accent);
     }
 
+    .score-name-input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      background: rgba(15, 21, 36, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .score-name-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .top-scores {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .top-scores h3 {
+      color: var(--accent);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .top-scores .score-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .top-scores .score-row .rank {
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 24px;
+    }
+
+    .top-scores .score-row .name {
+      flex: 1;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .top-scores .score-row .pts {
+      font-weight: 600;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .top-scores .no-scores {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
     footer {
       display: flex;
       flex-wrap: wrap;
@@ -255,6 +318,8 @@
             swipe on mobile. Avoid the walls and your own body.
             Boost stars are worth double. Press <kbd>Enter</kbd> or tap to start.
           </p>
+          <input class="score-name-input" id="nameInput" type="text" maxlength="12" placeholder="Callsign" aria-label="Player name">
+          <div class="top-scores" id="startScores"></div>
           <div class="actions">
             <button class="btn-primary" id="startBtn" type="button">Unleash serpent</button>
           </div>
@@ -270,6 +335,7 @@
         <div class="overlay-card hidden" id="loseCard">
           <h2>Serpent lost</h2>
           <p id="loseText">The trail collapsed on itself.</p>
+          <div class="top-scores" id="loseScores"></div>
           <div class="actions">
             <button class="btn-primary" id="retryBtn" type="button">Retry</button>
           </div>
@@ -292,6 +358,8 @@
     const H = canvas.height;
 
     const STORAGE_KEY = "ntchelp.snake.best";
+    const STORAGE_KEY_LIST = "ntchelp.snake.scores";
+    const STORAGE_KEY_NAME = "ntchelp.snake.name";
 
     const CFG = {
       cols: 30,
@@ -327,6 +395,9 @@
       restartFromPauseBtn: document.getElementById("restartFromPauseBtn"),
       retryBtn: document.getElementById("retryBtn"),
       muteBtn: document.getElementById("muteBtn"),
+      nameInput: document.getElementById("nameInput"),
+      startScores: document.getElementById("startScores"),
+      loseScores: document.getElementById("loseScores"),
     };
 
     // ---------- STATE ----------
@@ -471,6 +542,81 @@
       updateHud();
     }
 
+    // ---------- SCORES LIST ----------
+    function loadName() {
+      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+    }
+
+    function saveName(name) {
+      localStorage.setItem(STORAGE_KEY_NAME, name);
+    }
+
+    function loadScores() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveScores(list) {
+      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+    }
+
+    function recordScore(score) {
+      const name = (el.nameInput.value || "").trim().slice(0, 12) || "Player";
+      const list = loadScores();
+      list.push({ name, score });
+      list.sort((a, b) => b.score - a.score);
+      const top = list.slice(0, 5);
+      saveScores(top);
+      renderScores();
+    }
+
+    function renderScores() {
+      const list = loadScores();
+      for (const container of [el.startScores, el.loseScores]) {
+        container.textContent = "";
+        const h3 = document.createElement("h3");
+        h3.textContent = "Top Scores";
+        container.appendChild(h3);
+        if (list.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "no-scores";
+          empty.textContent = "No scores yet — be the first!";
+          container.appendChild(empty);
+        } else {
+          list.forEach((entry, i) => {
+            const row = document.createElement("div");
+            row.className = "score-row";
+            const rank = document.createElement("span");
+            rank.className = "rank";
+            rank.textContent = String(i + 1);
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = entry.name;
+            const pts = document.createElement("span");
+            pts.className = "pts";
+            pts.textContent = String(entry.score);
+            row.appendChild(rank);
+            row.appendChild(name);
+            row.appendChild(pts);
+            container.appendChild(row);
+          });
+        }
+      }
+    }
+
+    function initNameInput() {
+      el.nameInput.value = loadName();
+      el.nameInput.addEventListener("input", () => {
+        const v = el.nameInput.value.trim().slice(0, 12);
+        saveName(v || "Player");
+      });
+    }
+
     // ---------- ENTITIES ----------
     function initStars() {
       state.stars = Array.from({ length: 90 }, () => ({
@@ -567,6 +713,7 @@
       state.mode = "gameover";
       state.shake = 12;
       saveBest();
+      recordScore(state.score);
       sfxGameOver();
       const head = state.snake[0];
       const p = cellCenter(head.x, head.y);
@@ -965,6 +1112,8 @@
     state.speedLevel = 1;
     state.food = null;
     spawnFood();
+    initNameInput();
+    renderScores();
     updateHud();
     show(el.startCard);
     requestAnimationFrame(loop);
