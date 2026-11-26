@@ -460,12 +460,20 @@
     };
 
     // ---------- STATE ----------
+        // ---------- SAFE STORAGE ----------
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
     const state = {
       mode: "menu", // menu | playing | gameover
       score: 0,
       lives: 3,
       wave: 1,
-      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      best: Number(safeGet(STORAGE_KEY) || 0) || 0,
       ship: null,
       bullets: [],
       asteroids: [],
@@ -609,6 +617,13 @@
     // ---------- HELPERS ----------
     function rand(a, b) { return a + Math.random() * (b - a); }
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function segDist(px, py, ax, ay, bx, by) {
+      const abx = bx - ax, aby = by - ay;
+      const len2 = abx * abx + aby * aby;
+      const t = len2 > 0 ? clamp(((px - ax) * abx + (py - ay) * aby) / len2, 0, 1) : 0;
+      const dx = px - (ax + abx * t), dy = py - (ay + aby * t);
+      return Math.hypot(dx, dy);
+    }
 
     function wrap(obj, m) {
       if (obj.x < -m) obj.x = W + m; else if (obj.x > W + m) obj.x = -m;
@@ -633,23 +648,23 @@
     function saveBest() {
       if (state.score > state.best) {
         state.best = state.score;
-        localStorage.setItem(STORAGE_KEY, String(state.best));
+        safeSet(STORAGE_KEY, String(state.best));
       }
       updateHud();
     }
 
     // ---------- SCORES LIST ----------
     function loadName() {
-      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+      return safeGet(STORAGE_KEY_NAME) || "Player";
     }
 
     function saveName(name) {
-      localStorage.setItem(STORAGE_KEY_NAME, name);
+      safeSet(STORAGE_KEY_NAME, name);
     }
 
     function loadScores() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const raw = safeGet(STORAGE_KEY_LIST);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
       } catch {
@@ -658,7 +673,7 @@
     }
 
     function saveScores(list) {
-      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+      safeSet(STORAGE_KEY_LIST, JSON.stringify(list));
     }
 
     function recordScore(score) {
@@ -977,6 +992,8 @@
     });
 
     window.addEventListener("keydown", (e) => {
+      if (e.target === el.nameInput) return;
+      if (e.repeat) return;
       state.keys[e.key] = true;
       if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(e.key)) e.preventDefault();
       if (e.key === "Enter" && (state.mode === "menu" || state.mode === "gameover")) {
@@ -1033,6 +1050,7 @@
         ship.vx = (ship.vx / sp) * CFG.ship.maxSpeed;
         ship.vy = (ship.vy / sp) * CFG.ship.maxSpeed;
       }
+      ship.spx = ship.x; ship.spy = ship.y;
       ship.x += ship.vx * dt;
       ship.y += ship.vy * dt;
       wrap(ship, 20);
@@ -1057,6 +1075,7 @@
       // bullets
       for (let i = state.bullets.length - 1; i >= 0; i--) {
         const b = state.bullets[i];
+        b.px = b.x; b.py = b.y;
         b.x += b.vx * dt;
         b.y += b.vy * dt;
         b.life -= dt;
@@ -1075,12 +1094,14 @@
       // bullets vs asteroids
       for (let bi = state.bullets.length - 1; bi >= 0; bi--) {
         const b = state.bullets[bi];
+        const wrapped = (Math.abs(b.x - b.px) > 40 || Math.abs(b.y - b.py) > 40); // edge wrap -> no sweep
         for (let ai = state.asteroids.length - 1; ai >= 0; ai--) {
           const a = state.asteroids[ai];
           const rr = a.r + 3;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          if (dx * dx + dy * dy <= rr * rr) {
+          const hit = wrapped
+            ? (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y) <= rr * rr
+            : segDist(a.x, a.y, b.px, b.py, b.x, b.y) < rr; // segment sweep: no tunneling
+          if (hit) {
             state.bullets.splice(bi, 1);
             destroyAsteroid(a, ai);
             break;
@@ -1090,11 +1111,13 @@
 
       // ship vs asteroids
       if (ship.alive && ship.invincibleT <= 0) {
+        const shipWrapped = (Math.abs(ship.x - ship.spx) > 40 || Math.abs(ship.y - ship.spy) > 40);
         for (const a of state.asteroids) {
           const rr = CFG.ship.radius + a.r * 0.85;
-          const dx = ship.x - a.x;
-          const dy = ship.y - a.y;
-          if (dx * dx + dy * dy <= rr * rr) {
+          const hit = shipWrapped
+            ? (ship.x - a.x) * (ship.x - a.x) + (ship.y - a.y) * (ship.y - a.y) <= rr * rr
+            : segDist(a.x, a.y, ship.spx, ship.spy, ship.x, ship.y) < rr; // segment sweep: no tunneling
+          if (hit) {
             killShip();
             break;
           }

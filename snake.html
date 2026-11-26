@@ -412,10 +412,18 @@
     };
 
     // ---------- STATE ----------
+        // ---------- SAFE STORAGE ----------
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
     const state = {
       mode: "menu", // menu | playing | paused | gameover
       score: 0,
-      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      best: Number(safeGet(STORAGE_KEY) || 0) || 0,
       snake: [],
       dir: DIRS.right,
       queue: [],
@@ -548,23 +556,23 @@
     function saveBest() {
       if (state.score > state.best) {
         state.best = state.score;
-        localStorage.setItem(STORAGE_KEY, String(state.best));
+        safeSet(STORAGE_KEY, String(state.best));
       }
       updateHud();
     }
 
     // ---------- SCORES LIST ----------
     function loadName() {
-      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+      return safeGet(STORAGE_KEY_NAME) || "Player";
     }
 
     function saveName(name) {
-      localStorage.setItem(STORAGE_KEY_NAME, name);
+      safeSet(STORAGE_KEY_NAME, name);
     }
 
     function loadScores() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const raw = safeGet(STORAGE_KEY_LIST);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
       } catch {
@@ -573,7 +581,7 @@
     }
 
     function saveScores(list) {
-      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+      safeSet(STORAGE_KEY_LIST, JSON.stringify(list));
     }
 
     function recordScore(score) {
@@ -903,6 +911,8 @@
     }, { passive: true });
 
     window.addEventListener("keydown", (e) => {
+      if (e.target === el.nameInput) return;
+      if (e.repeat) return;
       if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) e.preventDefault();
 
       if (e.key === "Enter") {

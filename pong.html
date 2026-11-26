@@ -396,11 +396,19 @@
     };
 
     // ---------- STATE ----------
+        // ---------- SAFE STORAGE ----------
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
     const state = {
       mode: "menu", // menu | serving | playing | gameover
       p1: 0,
       p2: 0,
-      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      best: Number(safeGet(STORAGE_KEY) || 0) || 0,
       gameMode: "1p", // "1p" | "2p" | "ai"
       p1y: H / 2 - CFG.paddleH / 2,
       p2y: H / 2 - CFG.paddleH / 2,
@@ -537,23 +545,23 @@
     function saveBest() {
       if (state.p1 > state.best) {
         state.best = state.p1;
-        localStorage.setItem(STORAGE_KEY, String(state.best));
+        safeSet(STORAGE_KEY, String(state.best));
       }
       updateHud();
     }
 
     // ---------- SCORES LIST ----------
     function loadName() {
-      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+      return safeGet(STORAGE_KEY_NAME) || "Player";
     }
 
     function saveName(name) {
-      localStorage.setItem(STORAGE_KEY_NAME, name);
+      safeSet(STORAGE_KEY_NAME, name);
     }
 
     function loadScores() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const raw = safeGet(STORAGE_KEY_LIST);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
       } catch {
@@ -562,7 +570,7 @@
     }
 
     function saveScores(list) {
-      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+      safeSet(STORAGE_KEY_LIST, JSON.stringify(list));
     }
 
     function recordScore(score) {
@@ -806,6 +814,8 @@
     });
 
     window.addEventListener("keydown", (e) => {
+      if (e.target === el.nameInput) return;
+      if (e.repeat) return;
       if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.preventDefault();
 
       if (e.key === "Enter") {
@@ -894,24 +904,24 @@
 
       if (state.mode !== "playing") return;
 
-      // P1
-      if (state.gameMode === "2p") {
+      // P1: human in 1p + 2p; AI only in ai mode
+      if (state.gameMode === "ai") {
+        state.p1y = aiTrack(state.p1y, true, dt);
+      } else {
         let d1 = 0;
         if (keys["w"] || keys["W"]) d1 -= 1;
         if (keys["s"] || keys["S"]) d1 += 1;
         state.p1y = clamp(state.p1y + d1 * CFG.paddleSpeed * dt, 8, H - CFG.paddleH - 8);
-      } else {
-        state.p1y = aiTrack(state.p1y, true, dt); // 1p: P1 AI; ai: P1 AI
       }
 
-      // P2
+      // P2: AI in 1p + ai; human in 2p
       if (state.gameMode === "2p") {
         let d2 = 0;
         if (keys["ArrowUp"]) d2 -= 1;
         if (keys["ArrowDown"]) d2 += 1;
         state.p2y = clamp(state.p2y + d2 * CFG.paddleSpeed * dt, 8, H - CFG.paddleH - 8);
       } else {
-        state.p2y = aiTrack(state.p2y, false, dt); // 1p: P2 AI; ai: P2 AI
+        state.p2y = aiTrack(state.p2y, false, dt);
       }
 
       // ball
@@ -933,7 +943,7 @@
       if (
         state.ball.vx < 0 &&
         state.ball.x - CFG.ballR <= CFG.paddleX1 + CFG.paddleW &&
-        state.ball.x - CFG.ballR >= CFG.paddleX1 - 8 &&
+        state.ball.x - CFG.ballR >= CFG.paddleX1 &&
         state.ball.y > state.p1y - CFG.ballR &&
         state.ball.y < state.p1y + CFG.paddleH + CFG.ballR
       ) {
@@ -945,7 +955,7 @@
       if (
         state.ball.vx > 0 &&
         state.ball.x + CFG.ballR >= CFG.paddleX2 &&
-        state.ball.x + CFG.ballR <= CFG.paddleX2 + CFG.paddleW + 8 &&
+        state.ball.x + CFG.ballR <= CFG.paddleX2 + CFG.paddleW &&
         state.ball.y > state.p2y - CFG.ballR &&
         state.ball.y < state.p2y + CFG.paddleH + CFG.ballR
       ) {
@@ -1069,7 +1079,7 @@
       if (!state.lastTs) state.lastTs = ts;
       let dt = (ts - state.lastTs) / 1000;
       state.lastTs = ts;
-      dt = Math.min(dt, 0.033);
+      dt = Math.min(Math.max(dt, 0), 0.033); // guard 0/negative (tab-switch) + cap
       update(dt);
       draw();
       requestAnimationFrame(loop);

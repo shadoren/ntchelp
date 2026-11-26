@@ -418,11 +418,19 @@
       loseGlobal: document.getElementById("loseGlobal"),
     };
 
+    // ---------- SAFE STORAGE ----------
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
     // ---------- STATE ----------
     const state = {
       mode: "menu", // menu | playing | gameover
       score: 0,
-      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      best: Number(safeGet(STORAGE_KEY) || 0) || 0,
       px: W / 2 - CFG.playerW / 2,
       playerBullets: [],
       alienBullets: [],
@@ -438,6 +446,7 @@
       shootCd: 0,
       fireT: 1.5,
       aliveCount: CFG.alienCols * CFG.alienRows,
+      waveTotal: CFG.alienCols * CFG.alienRows, // wave's starting count (drives thin-ratio)
       wave: 1,
       intermission: 0, // >0 = between waves (countdown); 0 = active
       shake: 0,
@@ -583,23 +592,23 @@
     function saveBest() {
       if (state.score > state.best) {
         state.best = state.score;
-        localStorage.setItem(STORAGE_KEY, String(state.best));
+        safeSet(STORAGE_KEY, String(state.best));
       }
       updateHud();
     }
 
     // ---------- SCORES LIST ----------
     function loadName() {
-      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+      return safeGet(STORAGE_KEY_NAME) || "Player";
     }
 
     function saveName(name) {
-      localStorage.setItem(STORAGE_KEY_NAME, name);
+      safeSet(STORAGE_KEY_NAME, name);
     }
 
     function loadScores() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const raw = safeGet(STORAGE_KEY_LIST);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
       } catch {
@@ -608,7 +617,7 @@
     }
 
     function saveScores(list) {
-      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+      safeSet(STORAGE_KEY_LIST, JSON.stringify(list));
     }
 
     function recordScore(score) {
@@ -773,6 +782,7 @@
         }
       }
       state.aliveCount = state.aliens.length;
+      state.waveTotal = state.aliens.length;
     }
 
     function waveSpeedMult() { return Math.min(2.2, 1 + (state.wave - 1) * 0.14); }
@@ -885,6 +895,10 @@
     }
 
     // ---------- INPUT ----------
+    function canvasX(e) {
+      const r = canvas.getBoundingClientRect();
+      return (e.clientX - r.left) * (W / Math.max(1, r.width));
+    }
     canvas.addEventListener("pointerdown", (e) => {
       ensureAudio();
       if (state.mode === "menu" || state.mode === "gameover") {
@@ -892,17 +906,18 @@
       }
       pointerDown = true;
       fireEdge = true;
-      pointerX = e.offsetX;
+      pointerX = canvasX(e);
     });
 
     window.addEventListener("pointermove", (e) => {
-      if (pointerDown) pointerX = e.offsetX;
+      if (pointerDown) pointerX = canvasX(e);
     });
 
     window.addEventListener("pointerup", () => { pointerDown = false; });
     window.addEventListener("pointercancel", () => { pointerDown = false; });
 
     window.addEventListener("keydown", (e) => {
+      if (e.target === el.nameInput) return; // don't drive the game while typing a name
       if ([" ", "Spacebar"].includes(e.key)) e.preventDefault();
 
       if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
@@ -922,7 +937,7 @@
       }
 
       if (e.key === "Enter") {
-        if (state.mode === "menu" || state.mode === "gameover") {
+        if (!e.repeat && (state.mode === "menu" || state.mode === "gameover")) {
           ensureAudio();
           startGame();
         }
@@ -930,7 +945,7 @@
       }
 
       if (e.key === "r" || e.key === "R") {
-        if (state.mode !== "menu") { ensureAudio(); startGame(); }
+        if (!e.repeat && state.mode !== "menu") { ensureAudio(); startGame(); }
         return;
       }
     });
@@ -1007,8 +1022,7 @@
 
       // touch / pointer steering + auto-fire
       if (pointerDown && pointerX != null) {
-        const scaleX = W / Math.max(1, canvas.clientWidth);
-        const target = pointerX * scaleX - CFG.playerW / 2;
+        const target = pointerX - CFG.playerW / 2; // pointerX already canvas-space
         const diff = target - state.px;
         state.px += clamp(diff, -CFG.playerSpeed * dt, CFG.playerSpeed * dt);
       }
@@ -1041,7 +1055,7 @@
       }
 
       // alien formation: side-to-side, drop at the edges, faster as thinned
-      const total = CFG.alienCols * CFG.alienRows;
+      const total = state.waveTotal;
       const speed = (CFG.alienSpeedBase + (1 - state.aliveCount / total) * CFG.alienSpeedExtra) * waveSpeedMult();
       let minX = Infinity;
       let maxX = -Infinity;
@@ -1092,18 +1106,16 @@
       const bulletSpeed = CFG.alienBulletBase + (1 - state.aliveCount / total) * CFG.alienBulletExtra;
       for (let i = state.alienBullets.length - 1; i >= 0; i--) {
         const b = state.alienBullets[i];
+        const prevY = b.y;
         b.y += bulletSpeed * dt;
         if (b.y > H + 10) {
           state.alienBullets.splice(i, 1);
           continue;
         }
         let consumed = false;
-        for (const bk of state.bunkers) {
-          if (bunkerHit(bk, b.x, b.y) && damageBunker(bk, b.x, b.y)) {
-            consumed = true;
-            sfxBunker();
-            break;
-          }
+        if (sweepPlayerBulletBunkers(b, prevY, b.y)) { // segment sweep: no tunneling through bunker rows
+          consumed = true;
+          sfxBunker();
         }
         if (consumed) {
           state.alienBullets.splice(i, 1);

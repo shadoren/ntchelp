@@ -398,10 +398,18 @@
     };
 
     // ---------- STATE ----------
+        // ---------- SAFE STORAGE ----------
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
     const state = {
       mode: "menu", // menu | playing | wavebreak | gameover
       score: 0,
-      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      best: Number(safeGet(STORAGE_KEY) || 0) || 0,
       wave: 1,
       cities: [],
       enemies: [],
@@ -533,23 +541,23 @@
     function saveBest() {
       if (state.score > state.best) {
         state.best = state.score;
-        localStorage.setItem(STORAGE_KEY, String(state.best));
+        safeSet(STORAGE_KEY, String(state.best));
       }
       updateHud();
     }
 
     // ---------- SCORES LIST ----------
     function loadName() {
-      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+      return safeGet(STORAGE_KEY_NAME) || "Player";
     }
 
     function saveName(name) {
-      localStorage.setItem(STORAGE_KEY_NAME, name);
+      safeSet(STORAGE_KEY_NAME, name);
     }
 
     function loadScores() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const raw = safeGet(STORAGE_KEY_LIST);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
       } catch {
@@ -558,7 +566,7 @@
     }
 
     function saveScores(list) {
-      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+      safeSet(STORAGE_KEY_LIST, JSON.stringify(list));
     }
 
     function recordScore(score) {
@@ -760,6 +768,13 @@
     }
 
     function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+    function segDist(px, py, ax, ay, bx, by) {
+      const abx = bx - ax, aby = by - ay;
+      const len2 = abx * abx + aby * aby;
+      const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * abx + (py - ay) * aby) / len2)) : 0;
+      const dx = px - (ax + abx * t), dy = py - (ay + aby * t);
+      return Math.hypot(dx, dy);
+    }
 
     function hitCity(x, y) {
       for (const c of state.cities) {
@@ -850,6 +865,8 @@
     });
 
     window.addEventListener("keydown", (e) => {
+      if (e.target === el.nameInput) return;
+      if (e.repeat) return;
       if (e.key === "Enter") {
         if (state.mode === "menu" || state.mode === "gameover") {
           ensureAudio();
@@ -914,6 +931,7 @@
       // enemies fall from the top toward their ground target
       for (let i = state.enemies.length - 1; i >= 0; i--) {
         const m = state.enemies[i];
+        m.px = m.x; m.py = m.y;
         m.x += m.vx * dt;
         m.y += m.vy * dt;
 
@@ -971,7 +989,11 @@
         const m = state.enemies[i];
         for (let j = state.splashes.length - 1; j >= 0; j--) {
           const sp = state.splashes[j];
-          if (dist(m, sp) < sp.r) {
+          // segment sweep: enemy path prev->now against splash radius (no tunneling)
+          const hit = (m.px === undefined || m.py === undefined)
+            ? dist(m, sp) < sp.r
+            : segDist(sp.x, sp.y, m.px, m.py, m.x, m.y) < sp.r;
+          if (hit) {
             state.enemies.splice(i, 1);
             state.splashes.splice(j, 1);
             state.score += CFG.killPoints;

@@ -393,6 +393,14 @@
     };
 
     // ---------- STATE ----------
+        // ---------- SAFE STORAGE ----------
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
     const state = {
       mode: "menu", // menu | playing | gameover
       grid: [],
@@ -400,7 +408,7 @@
       started: false,
       revealedCount: 0,
       flagsPlaced: 0,
-      best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
+      best: Number(safeGet(STORAGE_KEY) || 0) || 0,
       boom: null,
       particles: [],
       shake: 0,
@@ -534,23 +542,23 @@
     function saveBest() {
       if (state.best === 0 || state.time < state.best) {
         state.best = state.time;
-        localStorage.setItem(STORAGE_KEY, String(state.best));
+        safeSet(STORAGE_KEY, String(state.best));
       }
       updateHud();
     }
 
     // ---------- SCORES LIST ----------
     function loadName() {
-      return localStorage.getItem(STORAGE_KEY_NAME) || "Player";
+      return safeGet(STORAGE_KEY_NAME) || "Player";
     }
 
     function saveName(name) {
-      localStorage.setItem(STORAGE_KEY_NAME, name);
+      safeSet(STORAGE_KEY_NAME, name);
     }
 
     function loadScores() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY_LIST);
+        const raw = safeGet(STORAGE_KEY_LIST);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
       } catch {
@@ -559,7 +567,7 @@
     }
 
     function saveScores(list) {
-      localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(list));
+      safeSet(STORAGE_KEY_LIST, JSON.stringify(list));
     }
 
     function recordScore(score) {
@@ -851,11 +859,13 @@
 
     let longPressTimer = null;
     let longPressFired = false;
+    let justStarted = false;
 
     canvas.addEventListener("pointerdown", (e) => {
       ensureAudio();
       if (state.mode === "menu" || state.mode === "gameover") {
         startGame();
+        justStarted = true; // don't let the paired pointerup make the first move
         return;
       }
       const hit = pointerCell(e);
@@ -868,6 +878,7 @@
     });
 
     canvas.addEventListener("pointerup", (e) => {
+      if (justStarted) { justStarted = false; return; }
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       if (longPressFired) { longPressFired = false; return; }
       const hit = pointerCell(e);
@@ -881,11 +892,14 @@
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      if (longPressFired) { longPressFired = false; return; } // long-press already flagged; don't double-toggle
       const hit = pointerCell(e);
       if (hit) toggleFlag(hit.r, hit.c);
     });
 
     window.addEventListener("keydown", (e) => {
+      if (e.target === el.nameInput) return;
+      if (e.repeat) return;
       if (e.key === "Enter") {
         if (state.mode === "menu" || state.mode === "gameover") {
           ensureAudio();
@@ -960,7 +974,7 @@
             ctx.fillStyle = g;
             roundRect(x, y, CFG.cell, CFG.cell, 10);
             ctx.fill();
-            ctx.strokeStyle = cell === mineHighlight ? "#ff5c7a" : "rgba(124, 108, 255, 0.5)";
+            ctx.strokeStyle = "rgba(124, 108, 255, 0.5)";
             ctx.lineWidth = 1.5;
             roundRect(x, y, CFG.cell, CFG.cell, 10);
             ctx.stroke();
@@ -1010,8 +1024,6 @@
         ctx.fillText("✸", pos.x, pos.y);
       }
     }
-
-    let mineHighlight = null;
 
     function roundRect(x, y, w, h, r) {
       ctx.beginPath();
