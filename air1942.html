@@ -912,7 +912,7 @@ dropCd: 0,
       state.dropCd = 0;
       state.playerBullets = [];
       state.enemyBullets = [];
-      while ((state.genUpTo + 1) * LEVEL_W <= H + 600) {
+      while ((state.genUpTo + 1) * LEVEL_W <= LEVEL_W + 600) {
         generateLevel(state.genUpTo + 1);
         state.genUpTo++;
       }
@@ -1103,7 +1103,7 @@ dropCd: 0,
       state.worldY += state.scrollSpeed * dt;
 
       // lazy level generation ahead (above) the camera
-      while ((state.genUpTo + 1) * LEVEL_W <= state.worldY + H + 600) {
+      while ((state.genUpTo + 1) * LEVEL_W <= state.worldY + LEVEL_W + 600) {
         generateLevel(state.genUpTo + 1);
         state.genUpTo++;
       }
