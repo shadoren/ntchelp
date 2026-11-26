@@ -439,6 +439,8 @@
       pointerY: 0,
       enemies: [],
       islands: [],
+      powerups: [],
+dropCd: 0,
       playerBullets: [],
       enemyBullets: [],
       particles: [],
@@ -906,6 +908,8 @@
       state.genUpTo = 0;
       state.enemies = [];
       state.islands = [];
+      state.powerups = [];
+      state.dropCd = 0;
       state.playerBullets = [];
       state.enemyBullets = [];
       while ((state.genUpTo + 1) * LEVEL_W <= H + 600) {
@@ -944,7 +948,7 @@
       state.fireCd = 0;
       state.firing = false;
       state.weaponTier = 0;
-      state.weapon = weaponForLevel(1);
+      state.weapon = WEAPONS[0];
       state.upgradeFlash = "";
       state.upgradeFlashT = 0;
       state.spawnGrace = 1.2;
@@ -974,6 +978,35 @@
       show(el.loseCard);
     }
 
+    const DROP_CHANCE = { scout: 0.05, fighter: 0.08, bomber: 0.15, tank: 0.20 };
+
+    function spawnPowerup(wx, wy, fallSpeed) {
+      state.powerups.push({ wx, wy, vy: Math.max(18, fallSpeed || 30), age: 0 });
+    }
+
+    function maybeDrop(e) {
+      const ch = DROP_CHANCE[e.type] || 0;
+      if (state.dropCd > 0) return; // anti-spam: min gap between drops
+      if (Math.random() < ch) { spawnPowerup(e.wx, e.wy, 0.5 * Math.abs(e.vy || 0)); state.dropCd = 1.2; }
+    }
+
+    function collectPowerup() {
+      if (state.weaponTier < WEAPONS.length - 1) {
+        state.weaponTier++;
+        state.weapon = WEAPONS[state.weaponTier];
+        state.upgradeFlash = state.weapon.name.toUpperCase() + "!";
+        state.upgradeFlashT = 1.2;
+        sfxUpgrade();
+        if (state.weapon.kind === "laser") startLaser();
+      } else {
+        // max weapon tier: bonus pickup -> +1 life (cap 5), else +500 points
+        if (state.lives < 5) { state.lives++; }
+        else { state.score += 500; }
+        sfxUpgrade();
+      }
+      updateHud();
+    }
+
     function damageEnemy(e, idx, amount) {
       if (!e || e.hp == null) return;
       e.hp -= amount;
@@ -981,6 +1014,7 @@
         state.score += e.val;
         spawnExplosion(e.wx, state.worldY - e.wy, e.type === "bomber" ? "#ff5c7a" : "#ffc857", e.type === "bomber" ? 22 : 14);
         sfxExplosion();
+        maybeDrop(e);
         state.enemies.splice(idx, 1);
       }
     }
@@ -1076,6 +1110,7 @@
 
       // spawn grace after (re)start
       if (state.spawnGrace > 0) state.spawnGrace -= dt;
+      if (state.dropCd > 0) state.dropCd -= dt;
 
       // level-clear bonus + HUD + weapon progression
       const curLevel = Math.floor(state.worldY / LEVEL_W) + 1;
@@ -1083,14 +1118,6 @@
         state.shownLevel = curLevel;
         state.score += 40 + curLevel * 6;
         sfxLevel();
-        const newWeapon = weaponForLevel(curLevel);
-        if (newWeapon !== state.weapon) {
-          state.weapon = newWeapon;
-          state.upgradeFlash = newWeapon.name.toUpperCase() + "!";
-          state.upgradeFlashT = 1.2;
-          sfxUpgrade();
-          if (newWeapon.kind === "laser") startLaser();
-        }
       }
 
       // player movement
@@ -1242,6 +1269,17 @@
       for (let i = state.islands.length - 1; i >= 0; i--) {
         const isl = state.islands[i];
         if (isl.wy - isl.h < state.worldY - H - 40) state.islands.splice(i, 1);
+      }
+
+      // power-up pickups (drift down the screen slowly, collected on contact)
+      for (let pi = state.powerups.length - 1; pi >= 0; pi--) {
+        const pu = state.powerups[pi];
+        pu.age += dt;
+        pu.wy -= pu.vy * dt; // drift down at 1/2 the killer ship's speed
+        if (state.worldY - pu.wy > H + 40) { state.powerups.splice(pi, 1); continue; }
+        const dx = pu.wx - state.playerX, dy = pu.wy - (state.worldY - state.playerY);
+        const rr = 18 + CFG.playerR;
+        if (dx * dx + dy * dy < rr * rr) { state.powerups.splice(pi, 1); collectPowerup(); }
       }
 
       // enemy bullets (down)
@@ -1495,6 +1533,34 @@
       ctx.shadowBlur = 0;
     }
 
+    function drawPowerups() {
+      for (const pu of state.powerups) {
+        const sy = state.worldY - pu.wy;
+        if (sy < -40 || sy > H + 40) continue;
+        const pulse = 0.85 + 0.15 * Math.sin(pu.age * 6);
+        ctx.save();
+        ctx.shadowColor = "#ffc857";
+        ctx.shadowBlur = 18 * pulse;
+        const g = ctx.createRadialGradient(pu.wx, sy, 0, pu.wx, sy, 12 * pulse);
+        g.addColorStop(0, "#fff7d6");
+        g.addColorStop(0.5, "#ffc857");
+        g.addColorStop(1, "rgba(255,200,87,0.15)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(pu.wx, sy, 12 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // "P" glyph
+        ctx.fillStyle = "#3a2a05";
+        ctx.font = "bold 12px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("P", pu.wx, sy);
+        ctx.textBaseline = "alphabetic";
+      }
+      ctx.shadowBlur = 0;
+    }
+
     function drawBeams() {
       if (state.mode !== "playing" || state.weapon.kind !== "laser") return;
       const noseX = state.playerX, noseSy = state.playerY - 24;
@@ -1634,6 +1700,7 @@
       drawIslands();
       drawEnemies();
       drawBullets();
+      drawPowerups();
       drawBeams();
       if (state.mode !== "gameover") drawPlayer();
       drawUpgradeFlash();
