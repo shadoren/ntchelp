@@ -660,12 +660,14 @@
           container.appendChild(empty);
         } else {
           let _playerRank = -1;
+          let _playerFound = false;
           list.forEach((entry, i) => {
             const row = document.createElement("div");
             row.className = "score-row";
-            if (playerName != null && playerScore != null && String(entry.name || "Player").slice(0,12) === String(playerName).slice(0,12) && entry.score === playerScore) {
+            if (!_playerFound && playerName != null && playerScore != null && String(entry.name || "Player").slice(0,12) === String(playerName).slice(0,12) && entry.score === playerScore) {
               row.classList.add("score-highlight");
               _playerRank = i + 1;
+              _playerFound = true;
             }
             const rank = document.createElement("span");
             rank.className = "rank";
