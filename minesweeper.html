@@ -289,6 +289,11 @@
       .stat .value { font-size: 0.95rem; }
       footer { justify-content: center; text-align: center; }
     }
+    .score-highlight {
+      box-shadow: 0 0 8px var(--accent, #4de1c1);
+      border-left: 2px solid var(--accent, #4de1c1);
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -615,15 +620,15 @@
 
     function submitScore(name, score) {
       try {
-        fetch(SUPABASE_URL + "/rest/v1/scores", {
+        return fetch(SUPABASE_URL + "/rest/v1/scores", {
           method: "POST",
           headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimum" },
           body: JSON.stringify({ name: String(name || "Player").slice(0, 12), score: Math.max(0, Number(score) || 0), game: "minesweeper" })
-        }).catch(() => {});
-      } catch (e) {}
+        }).catch(() => Promise.resolve());
+      } catch (e) { return Promise.resolve(); }
     }
 
-    function renderGlobal() {
+    function renderGlobal(playerName, playerScore) {
       const paint = (list) => {
         for (const container of [el.startGlobal, el.loseGlobal]) {
           container.textContent = "";
@@ -636,9 +641,14 @@
             empty.textContent = "Loading global scores…";
             container.appendChild(empty);
           } else {
+            let _playerRank = -1;
             list.forEach((entry, i) => {
               const row = document.createElement("div");
               row.className = "score-row";
+              if (playerName != null && playerScore != null && String(entry.name || "Player").slice(0,12) === String(playerName).slice(0,12) && entry.score === playerScore) {
+                row.classList.add("score-highlight");
+                _playerRank = i + 1;
+              }
               const rank = document.createElement("span");
               rank.className = "rank";
               rank.textContent = String(i + 1);
@@ -653,7 +663,13 @@
               row.appendChild(pts);
               container.appendChild(row);
             });
+          if (_playerRank > 0) {
+            const _msg = document.createElement("div");
+            _msg.style.cssText = "color:var(--accent,#4de1c1);font-weight:700;font-size:0.85rem;margin-top:6px;";
+            _msg.textContent = "★ You made Top 5! (#" + _playerRank + ")";
+            container.appendChild(_msg);
           }
+}
         }
       };
       paint([]);
@@ -762,8 +778,7 @@
         state.mode = "gameover";
         saveBest();
         recordScore(state.time);
-        submitScore((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.time);
-        renderGlobal();
+        submitScore((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.time).then(() => renderGlobal((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.time));
         sfxWin();
         el.loseText.textContent = `Cleared in ${fmtTime(state.time)}! All mines dodged.`;
         show(el.loseCard);
