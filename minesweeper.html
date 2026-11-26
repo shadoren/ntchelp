@@ -604,7 +604,7 @@
     // ---------- GLOBAL (Supabase) LEADERBOARD ----------
     async function loadGlobalScores() {
       try {
-        const r = await fetch(SUPABASE_URL + "/rest/v1/scores?select=name,score&order=score.asc&limit=5", { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY } });
+        const r = await fetch(SUPABASE_URL + "/rest/v1/scores?select=name,score&game=eq.minesweeper&order=score.asc&limit=5", { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY } });
         if (!r.ok) return [];
         const rows = await r.json();
         return Array.isArray(rows) ? rows.slice(0, 5) : [];
@@ -618,7 +618,7 @@
         fetch(SUPABASE_URL + "/rest/v1/scores", {
           method: "POST",
           headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimum" },
-          body: JSON.stringify({ name: String(name || "Player").slice(0, 12), score: Math.max(0, Number(score) || 0) })
+          body: JSON.stringify({ name: String(name || "Player").slice(0, 12), score: Math.max(0, Number(score) || 0), game: "minesweeper" })
         }).catch(() => {});
       } catch (e) {}
     }
