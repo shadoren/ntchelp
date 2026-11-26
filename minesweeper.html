@@ -761,10 +761,10 @@
           for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
               if (dr === 0 && dc === 0) continue;
-              const rr = cr + dr;
-              const cc = cc + dc;
-              if (rr >= 0 && rr < CFG.rows && cc >= 0 && cc < CFG.cols && !state.grid[rr][cc].revealed && !state.grid[rr][cc].flagged) {
-                stack.push([rr, cc]);
+              const nr = cr + dr;
+              const nc = cc + dc;
+              if (nr >= 0 && nr < CFG.rows && nc >= 0 && nc < CFG.cols && !state.grid[nr][nc].revealed && !state.grid[nr][nc].flagged) {
+                stack.push([nr, nc]);
               }
             }
           }
