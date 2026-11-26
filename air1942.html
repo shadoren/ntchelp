@@ -814,13 +814,13 @@ dropCd: 0,
     }
 
     function makeEnemy(type, wx, wy, level, speedMul, rng) {
-      const SLOW = 0.667 * 0.667; // total ~0.44 of original descent
+      const SLOW = 0.667 * 0.667 * 0.7; // ~0.31 of original descent — slow, lets you aim
       const e = { type, baseX: wx, baseWY: wy, wx, wy, descent: 0, age: rng() * Math.PI * 2, fireT: 1 + rng() * 1.6 };
       const pats = ["sine", "lissajous", "orbit", "spiral"];
       e.pattern = pats[Math.floor(rng() * pats.length)];
-      e.patternSpeed = 1.0 + rng() * 1.0;
+      e.patternSpeed = 1.2 + rng() * 1.4; // faster loops -> more visible dodging
       e.phase = rng() * Math.PI * 2;
-      e.amp = 20 + rng() * 25;
+      e.amp = 45 + rng() * 40; // wider weave (45-85px) so ships dodge around a lot
       e.ampY = e.amp * (0.3 + rng() * 0.4);
       if (type === "scout") {
         e.hp = 1; e.r = 34; e.val = 100;
@@ -1268,7 +1268,8 @@ dropCd: 0,
       // islands cleanup (fully scrolled below the screen)
       for (let i = state.islands.length - 1; i >= 0; i--) {
         const isl = state.islands[i];
-        if (isl.wy - isl.h < state.worldY - H - 40) state.islands.splice(i, 1);
+        // cull when the island's TOP edge has fully scrolled below the screen (was: bottom edge -> tall islands vanished while still on screen)
+        if (isl.wy < state.worldY - H - 40) state.islands.splice(i, 1);
       }
 
       // power-up pickups (drift down the screen slowly, collected on contact)
