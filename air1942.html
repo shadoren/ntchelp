@@ -1203,8 +1203,9 @@ dropCd: 0,
         const b = state.playerBullets[bi];
         b.wx += (b.vx || 0) * dt;
         b.wy += b.vy * dt;
-        if (b.wy - state.worldY > H + 40) { state.playerBullets.splice(bi, 1); continue; }
-        if (b.wy - state.worldY < -40) { state.playerBullets.splice(bi, 1); continue; } // cull at the top edge -> can't hit prefill ships
+        const bsy = state.worldY - b.wy; // screen-y (smaller = higher on screen)
+        if (bsy > H + 40) { state.playerBullets.splice(bi, 1); continue; }    // off bottom (n/a for up-flying)
+        if (bsy < -40) { state.playerBullets.splice(bi, 1); continue; }       // off top edge -> can't hit prefill ships
         let hit = false;
         for (let ei = state.enemies.length - 1; ei >= 0; ei--) {
           const e = state.enemies[ei];
