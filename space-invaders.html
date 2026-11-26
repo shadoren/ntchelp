@@ -422,7 +422,7 @@
       score: 0,
       best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
       px: W / 2 - CFG.playerW / 2,
-      playerBullet: null,
+      playerBullets: [],
       alienBullets: [],
       aliens: [],
       bunkers: [],
@@ -443,6 +443,7 @@
     const keys = new Set();
     let pointerDown = false;
     let pointerX = null;
+    let fireEdge = false; // a discrete press/tap -> always fires (bypasses cooldown + limit)
 
     // ---------- AUDIO ----------
     const audio = {
@@ -829,7 +830,7 @@
     function startGame() {
       state.score = 0;
       state.px = W / 2 - CFG.playerW / 2;
-      state.playerBullet = null;
+      state.playerBullets = [];
       state.alienBullets = [];
       state.particles = [];
       state.shake = 0;
@@ -867,6 +868,7 @@
         startGame();
       }
       pointerDown = true;
+      fireEdge = true;
       pointerX = e.offsetX;
     });
 
@@ -891,6 +893,7 @@
       if (e.key === " " || e.key === "Spacebar") {
         ensureAudio();
         keys.add("fire");
+        if (!e.repeat) fireEdge = true; // a fresh press -> always fires
         if (state.mode === "menu" || state.mode === "gameover") startGame();
         return;
       }
@@ -961,19 +964,22 @@
       }
       state.px = clamp(state.px, 8, W - 8 - CFG.playerW);
 
-      // shooting
+      // shooting: a discrete press/tap (fireEdge) ALWAYS fires; holding auto-fires on cooldown
       state.shootCd -= dt;
-      const firing = keys.has("fire") || pointerDown;
-      if (firing && state.shootCd <= 0 && !state.playerBullet) {
-        state.playerBullet = { x: state.px + CFG.playerW / 2, y: CFG.playerY - 12 };
-        state.shootCd = CFG.shootCooldown;
+      const held = keys.has("fire") || pointerDown;
+      if (fireEdge || (held && state.shootCd <= 0)) {
+        state.playerBullets.push({ x: state.px + CFG.playerW / 2, y: CFG.playerY - 12 });
+        state.shootCd = CFG.shootCooldown; // edge resets cooldown too (no double-tap burst)
+        fireEdge = false;
         sfxShoot();
       }
+      fireEdge = false; // consume the edge (covers the no-fire branches)
 
-      // player bullet
-      if (state.playerBullet) {
-        state.playerBullet.y -= CFG.playerBulletSpeed * dt;
-        if (state.playerBullet.y < -10) state.playerBullet = null;
+      // player bullets
+      for (let i = state.playerBullets.length - 1; i >= 0; i--) {
+        const b = state.playerBullets[i];
+        b.y -= CFG.playerBulletSpeed * dt;
+        if (b.y < -10) state.playerBullets.splice(i, 1);
       }
 
       // march clock (animation + drum)
@@ -1059,32 +1065,33 @@
         }
       }
 
-      // player bullet vs aliens
-      if (state.playerBullet) {
-        const b = state.playerBullet;
+      // player bullets vs aliens + bunkers
+      for (let i = state.playerBullets.length - 1; i >= 0; i--) {
+        const b = state.playerBullets[i];
+        let hitAlien = false;
         for (const a of state.aliens) {
           if (!a.alive) continue;
           if (b.x > a.x && b.x < a.x + CFG.alienW && b.y > a.y && b.y < a.y + CFG.alienH) {
             a.alive = false;
             state.aliveCount--;
             state.score += a.pts;
-            state.playerBullet = null;
+            hitAlien = true;
             sfxKill();
             spawnParticles(a.x + CFG.alienW / 2, a.y + CFG.alienH / 2, a.color, 14);
-            updateHud();
             break;
           }
         }
-        if (state.playerBullet) {
-          const b = state.playerBullet;
-          const prevY = b.y + CFG.playerBulletSpeed * dt;
-          if (sweepPlayerBulletBunkers(b, prevY, b.y)) {
-            sfxBunker();
-            state.playerBullet = null;
-          }
+        if (hitAlien) {
+          state.playerBullets.splice(i, 1);
+          continue;
+        }
+        const prevY = b.y + CFG.playerBulletSpeed * dt;
+        if (sweepPlayerBulletBunkers(b, prevY, b.y)) {
+          sfxBunker();
+          state.playerBullets.splice(i, 1);
+          continue;
         }
       }
-
       updateHud();
     }
 
@@ -1201,13 +1208,13 @@
     }
 
     function drawBullets() {
-      if (state.playerBullet) {
+      for (const b of state.playerBullets) {
         ctx.fillStyle = "#ffc857";
         ctx.shadowColor = "#ffc857";
         ctx.shadowBlur = 8;
-        ctx.fillRect(state.playerBullet.x - 1.5, state.playerBullet.y - 10, 3, 10);
-        ctx.shadowBlur = 0;
+        ctx.fillRect(b.x - 1.5, b.y - 10, 3, 10);
       }
+      ctx.shadowBlur = 0;
       ctx.fillStyle = "#ff5c7a";
       ctx.shadowColor = "#ff5c7a";
       ctx.shadowBlur = 8;
