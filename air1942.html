@@ -1225,6 +1225,7 @@ dropCd: 0,
         const e = state.enemies[i];
         e.age += dt;
         e.descent += -e.vy * dt; // linear descent (e.vy is negative)
+        if (e.type === "tank") e.baseWY += 0.5 * state.scrollSpeed * dt; // tanks ride their island (which drifts at half world-speed)
         const t = e.age * e.patternSpeed;
         const a = e.amp || 0, ay = e.ampY || 0;
         let ox = 0, oy = 0;
@@ -1271,6 +1272,7 @@ dropCd: 0,
       // islands cleanup (fully scrolled below the screen)
       for (let i = state.islands.length - 1; i >= 0; i--) {
         const isl = state.islands[i];
+        isl.wy += 0.5 * state.scrollSpeed * dt; // drift down at half world-speed -> islands descend 50% slower than ships
         // cull when the island's TOP edge has fully scrolled below the screen (was: bottom edge -> tall islands vanished while still on screen)
         if (isl.wy < state.worldY - H - 40) state.islands.splice(i, 1);
       }
