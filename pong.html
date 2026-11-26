@@ -401,7 +401,7 @@
       p1: 0,
       p2: 0,
       best: Number(localStorage.getItem(STORAGE_KEY) || 0) || 0,
-      twoPlayer: false,
+      gameMode: "1p", // "1p" | "2p" | "ai"
       p1y: H / 2 - CFG.paddleH / 2,
       p2y: H / 2 - CFG.paddleH / 2,
       ball: { x: W / 2, y: H / 2, vx: 0, vy: 0, speed: CFG.ballSpeedBase },
@@ -772,14 +772,19 @@
     function gameOver() {
       state.mode = "gameover";
       state.shake = 10;
-      saveBest();
-      recordScore(state.p1);
-      submitScore((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.p1).then(() => renderGlobal((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.p1));
+      const isAI = state.gameMode === "ai";
+      if (!isAI) {
+        saveBest();
+        recordScore(state.p1);
+        submitScore((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.p1).then(() => renderGlobal((el.nameInput.value || "").trim().slice(0, 12) || "Player", state.p1));
+      }
       sfxMatchEnd();
       spawnParticles(state.ball.x, state.ball.y, state.p1 > state.p2 ? "#4de1c1" : "#ff5c7a", 26);
-      if (state.p1 > state.p2) {
+      if (isAI) {
+        el.loseText.textContent = state.p1 > state.p2 ? `AI-1 wins ${state.p1}–${state.p2}!` : `AI-2 wins ${state.p2}–${state.p1}!`;
+      } else if (state.p1 > state.p2) {
         el.loseText.textContent = `You win ${state.p1}–${state.p2}!`;
-      } else if (state.twoPlayer) {
+      } else if (state.gameMode === "2p") {
         el.loseText.textContent = `P2 takes it ${state.p2}–${state.p1}.`;
       } else {
         el.loseText.textContent = `AI takes it ${state.p2}–${state.p1}.`;
@@ -788,8 +793,10 @@
     }
 
     function toggleMode() {
-      state.twoPlayer = !state.twoPlayer;
-      el.modeBtn.textContent = state.twoPlayer ? "Mode: 2P local" : "Mode: 1P vs AI";
+      const next = state.gameMode === "1p" ? "2p" : state.gameMode === "2p" ? "ai" : "1p";
+      state.gameMode = next;
+      const label = next === "1p" ? "Mode: 1P vs AI" : next === "2p" ? "Mode: 2P local" : "Mode: AI vs AI";
+      el.modeBtn.textContent = label;
     }
 
     // ---------- INPUT ----------
@@ -846,6 +853,23 @@
       }
     }
 
+    function aiTrack(paddleY, isLeft, dt) {
+      const paddleX = isLeft ? CFG.paddleX1 : CFG.paddleX2;
+      const center = paddleY + CFG.paddleH / 2;
+      let goal = H / 2;
+      const incoming = isLeft ? state.ball.vx < 0 : state.ball.vx > 0;
+      if (incoming) {
+        const t = Math.abs(paddleX - state.ball.x) / Math.max(60, Math.abs(state.ball.vx));
+        goal = clamp(state.ball.y + state.ball.vy * t * 0.85, 40, H - 40);
+      }
+      const diff = goal - center;
+      if (Math.abs(diff) > 6) {
+        const step = Math.min(CFG.aiSpeed * dt, Math.abs(diff));
+        return clamp(paddleY + Math.sign(diff) * step, 8, H - CFG.paddleH - 8);
+      }
+      return paddleY;
+    }
+
     function update(dt) {
       for (const s of state.stars) {
         s.x -= 14 * s.z * dt;
@@ -871,19 +895,23 @@
       if (state.mode !== "playing") return;
 
       // P1
-      let d1 = 0;
-      if (keys["w"] || keys["W"]) d1 -= 1;
-      if (keys["s"] || keys["S"]) d1 += 1;
-      state.p1y = clamp(state.p1y + d1 * CFG.paddleSpeed * dt, 8, H - CFG.paddleH - 8);
+      if (state.gameMode === "2p") {
+        let d1 = 0;
+        if (keys["w"] || keys["W"]) d1 -= 1;
+        if (keys["s"] || keys["S"]) d1 += 1;
+        state.p1y = clamp(state.p1y + d1 * CFG.paddleSpeed * dt, 8, H - CFG.paddleH - 8);
+      } else {
+        state.p1y = aiTrack(state.p1y, true, dt); // 1p: P1 AI; ai: P1 AI
+      }
 
       // P2
-      if (state.twoPlayer) {
+      if (state.gameMode === "2p") {
         let d2 = 0;
         if (keys["ArrowUp"]) d2 -= 1;
         if (keys["ArrowDown"]) d2 += 1;
         state.p2y = clamp(state.p2y + d2 * CFG.paddleSpeed * dt, 8, H - CFG.paddleH - 8);
       } else {
-        updateAI(dt);
+        state.p2y = aiTrack(state.p2y, false, dt); // 1p: P2 AI; ai: P2 AI
       }
 
       // ball
