@@ -306,6 +306,7 @@
       <div class="hud">
         <div class="stat"><span class="label">Score</span><span class="value" id="score">0</span></div>
         <div class="stat"><span class="label">Aliens</span><span class="value" id="aliens">44</span></div>
+        <div class="stat"><span class="label">Wave</span><span class="value" id="wave">1</span></div>
         <div class="stat"><span class="label">Best</span><span class="value" id="best">0</span></div>
         <button class="btn-mute" id="muteBtn" type="button">Sound: on</button>
       </div>
@@ -402,6 +403,7 @@
     const el = {
       score: document.getElementById("score"),
       aliens: document.getElementById("aliens"),
+      wave: document.getElementById("wave"),
       best: document.getElementById("best"),
       startCard: document.getElementById("startCard"),
       loseCard: document.getElementById("loseCard"),
@@ -436,6 +438,8 @@
       shootCd: 0,
       fireT: 1.5,
       aliveCount: CFG.alienCols * CFG.alienRows,
+      wave: 1,
+      intermission: 0, // >0 = between waves (countdown); 0 = active
       shake: 0,
       lastTs: 0,
     };
@@ -526,6 +530,15 @@
       playNoiseBurst({ dur: 0.1, gain: 0.08, freq: 1200 });
     }
 
+    function sfxWaveClear() {
+      playTone({ type: "triangle", freq: 520, dur: 0.14, gain: 0.08, slide: 300 });
+    }
+
+    function sfxWave() {
+      playTone({ type: "sawtooth", freq: 180, dur: 0.22, gain: 0.07, slide: 120 });
+      playTone({ type: "triangle", freq: 660, dur: 0.1, gain: 0.05, delay: 0.12 });
+    }
+
     function sfxBunker() {
       playNoiseBurst({ dur: 0.09, gain: 0.09, freq: 900 });
       playTone({ type: "sine", freq: 130, dur: 0.09, gain: 0.07, slide: -40 });
@@ -563,6 +576,7 @@
     function updateHud() {
       el.score.textContent = String(state.score);
       el.aliens.textContent = String(state.aliveCount);
+      el.wave.textContent = String(state.wave);
       el.best.textContent = String(state.best);
     }
 
@@ -739,23 +753,30 @@
 
     function initAliens() {
       state.aliens = [];
-      const totalW = (CFG.alienCols - 1) * CFG.cellW + CFG.alienW;
+      // procedural per-wave grid: more rows every 2 waves (capped), denser spacing
+      const rows = Math.min(4 + Math.floor((state.wave - 1) / 2), 6);
+      const cols = CFG.alienCols;
+      const totalW = (cols - 1) * CFG.cellW + CFG.alienW;
       const sx = (W - totalW) / 2;
-      for (let r = 0; r < CFG.alienRows; r++) {
-        for (let c = 0; c < CFG.alienCols; c++) {
+      const cellH = Math.max(26, CFG.cellH - (state.wave - 1) * 2); // tighten rows as waves rise
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
           state.aliens.push({
             col: c,
             row: r,
             x: sx + c * CFG.cellW,
-            y: CFG.alienStartY + r * CFG.cellH,
+            y: CFG.alienStartY + r * cellH,
             alive: true,
-            pts: CFG.alienPts[r],
-            color: ALIEN_COLORS[r],
+            pts: CFG.alienPts[Math.min(r, CFG.alienPts.length - 1)],
+            color: ALIEN_COLORS[Math.min(r, ALIEN_COLORS.length - 1)],
           });
         }
       }
       state.aliveCount = state.aliens.length;
     }
+
+    function waveSpeedMult() { return Math.min(2.2, 1 + (state.wave - 1) * 0.14); }
+    function waveFireMult() { return Math.max(0.45, 1 - (state.wave - 1) * 0.09); }
 
     function initBunkers() {
       state.bunkers = [130, 410, 690].map((x) => ({
@@ -839,6 +860,8 @@
       state.marchFrame = false;
       state.shootCd = 0;
       state.fireT = 1.5;
+      state.wave = 1;
+      state.intermission = 0;
       initAliens();
       initBunkers();
       state.mode = "playing";
@@ -949,6 +972,33 @@
 
       if (state.mode !== "playing") return;
 
+      // intermission: between waves, count down then spawn the next procedural wave
+      if (state.intermission > 0) {
+        state.intermission -= dt;
+        state.playerBullets.length = 0; // clear stray bullets
+        state.alienBullets.length = 0;
+        if (state.intermission <= 0) {
+          state.wave++;
+          state.intermission = 0;
+          initAliens();
+          initBunkers(); // fresh shields each wave
+          state.fireT = 1.5;
+          state.marchT = 0;
+          state.dir = 1;
+          sfxWave();
+          updateHud();
+        }
+        return; // don't run combat logic during the lull
+      }
+
+      // wave cleared: all aliens dead -> brief lull, then the next wave
+      if (state.aliveCount <= 0) {
+        state.intermission = 3.0;
+        sfxWaveClear();
+        updateHud();
+        return;
+      }
+
       // player movement
       let dx = 0;
       if (keys.has("left")) dx -= 1;
@@ -992,7 +1042,7 @@
 
       // alien formation: side-to-side, drop at the edges, faster as thinned
       const total = CFG.alienCols * CFG.alienRows;
-      const speed = CFG.alienSpeedBase + (1 - state.aliveCount / total) * CFG.alienSpeedExtra;
+      const speed = (CFG.alienSpeedBase + (1 - state.aliveCount / total) * CFG.alienSpeedExtra) * waveSpeedMult();
       let minX = Infinity;
       let maxX = -Infinity;
       for (const a of state.aliens) {
@@ -1024,7 +1074,7 @@
       // alien fire: bottom-row shooters, faster as the swarm thins
       state.fireT -= dt;
       if (state.fireT <= 0) {
-        const interval = Math.max(0.35, 1.3 - (1 - state.aliveCount / total) * 0.9);
+        const interval = Math.max(0.3, (1.3 - (1 - state.aliveCount / total) * 0.9) * waveFireMult());
         state.fireT = interval * rand(0.7, 1.3);
         const bottom = {};
         for (const a of state.aliens) {
