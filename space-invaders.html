@@ -805,6 +805,26 @@
       return x > bk.x && x < bk.x + w && y > bk.y && y < bk.y + h;
     }
 
+    function sweepPlayerBulletBunkers(b, prevY, currY) {
+      const cs = CFG.bunkerCell;
+      const top = Math.min(currY, prevY);
+      const bot = Math.max(currY, prevY);
+      for (const bk of state.bunkers) {
+        const col = Math.floor((b.x - bk.x) / cs);
+        if (col < 0 || col >= 10) continue;
+        const r0 = Math.floor((top - bk.y) / cs);
+        const r1 = Math.floor((bot - bk.y) / cs);
+        for (let r = r0; r <= r1; r++) {
+          const cy = bk.y + r * cs + cs / 2; // cell center
+          if (cy < top || cy > bot) continue; // only rows the segment crossed
+          if (damageBunker(bk, b.x, cy)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
     // ---------- GAME FLOW ----------
     function startGame() {
       state.score = 0;
@@ -1056,13 +1076,11 @@
           }
         }
         if (state.playerBullet) {
-          for (const bk of state.bunkers) {
-            if (bunkerHit(bk, b.x, b.y)) {
-              damageBunker(bk, b.x, b.y);
-              sfxBunker();
-              state.playerBullet = null;
-              break;
-            }
+          const b = state.playerBullet;
+          const prevY = b.y + CFG.playerBulletSpeed * dt;
+          if (sweepPlayerBulletBunkers(b, prevY, b.y)) {
+            sfxBunker();
+            state.playerBullet = null;
           }
         }
       }
