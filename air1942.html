@@ -814,19 +814,20 @@
     function makeEnemy(type, wx, wy, level, speedMul, rng) {
       const e = { type, wx, baseX: wx, wy, baseY: wy, age: rng() * Math.PI * 2, fireT: 1 + rng() * 1.6 };
       if (type === "scout") {
-        e.hp = 1; e.r = 12; e.val = 100;
-        e.vy = -(48 + level * 2.5) * speedMul;
+        e.hp = 1; e.r = 24; e.val = 100; // 2x bigger, dies in exactly one hit
+        e.vy = -(48 + level * 2.5) * speedMul * 0.667; // ~1/3 slower descent
         e.amp = 0; e.freq = 0;
       } else if (type === "fighter") {
         e.hp = 2; e.r = 13; e.val = 150;
-        e.vy = -(30 + level * 1.8) * speedMul;
+        e.vy = -(30 + level * 1.8) * speedMul * 0.667; // ~1/3 slower descent
         e.amp = 30 + rng() * 34; e.freq = 1.8 + rng() * 1.6;
         e.phase = e.age;
       } else { // bomber
         e.hp = 5; e.r = 20; e.val = 300;
-        e.vy = -(9 + level * 0.8) * speedMul;
+        e.vy = -(9 + level * 0.8) * speedMul * 0.667; // ~1/3 slower descent
         e.amp = 0; e.freq = 0;
-        e.fireRate = Math.max(2, 4.2 - level * 0.03); // ~3.5-4.5s early, gentle ramp to floor 2s
+        e.fireRate = Math.max(1.2, 3.2 - level * 0.04); // fire faster as level grows
+        e.volley = Math.min(1 + Math.floor(level / 3), 5); // more bullets per volley with level
       }
       return e;
     }
@@ -836,7 +837,8 @@
         type: "tank", wx, wy, baseY: wy, age: rng() * Math.PI * 2,
         fireT: 1 + rng() * 1.5,
         hp: 4, r: 14, val: 250, vy: 0,
-        fireRate: Math.max(2, 4.8 - level * 0.03), // ~4-5s early, gentle ramp to floor 2s
+        fireRate: Math.max(1.4, 3.6 - level * 0.04), // fire faster as level grows
+        volley: Math.min(1 + Math.floor(level / 4), 4), // more bullets per volley with level
       };
     }
 
@@ -859,7 +861,7 @@
       const levelRng = mulberry32(0x9E3779B9 ^ (N * 2654435761));
       const base = (N - 1) * LEVEL_W; // world-y of level start (bottom of segment)
       const speedMul = 1 + Math.min(N * 0.03, 1.2); // gentle ramp, caps at 1.2x
-      const numFormations = Math.min(2 + Math.floor(N * 0.4), 12); // lower early density
+      const numFormations = Math.min(2 + Math.floor(N * 0.7), 22); // grows faster with level -> more ships
       const bomberChance = Math.min(0.1 + N * 0.015, 0.3);
       const islandChance = Math.min(0.08 + N * 0.04, 0.5);
 
@@ -873,8 +875,18 @@
           spawnIsland(wy, N, levelRng);
         } else if (r < bomberChance + islandChance + 0.34) {
           state.enemies.push(makeEnemy("fighter", wx, wy, N, speedMul, levelRng));
+          // extra fighters per formation as level grows -> more ships
+          const extra = Math.min(Math.floor(N / 4), 3);
+          for (let k = 0; k < extra; k++) {
+            state.enemies.push(makeEnemy("fighter", wx + (levelRng() - 0.5) * 90, wy + (levelRng() - 0.5) * 60, N, speedMul, levelRng));
+          }
         } else {
           state.enemies.push(makeEnemy("scout", wx, wy, N, speedMul, levelRng));
+          // extra scouts per formation as level grows -> more ships
+          const extra = Math.min(Math.floor(N / 3), 4);
+          for (let k = 0; k < extra; k++) {
+            state.enemies.push(makeEnemy("scout", wx + (levelRng() - 0.5) * 110, wy + (levelRng() - 0.5) * 70, N, speedMul, levelRng));
+          }
         }
       }
     }
@@ -1178,7 +1190,16 @@
           e.fireT -= dt;
           const sy = state.worldY - e.wy;
           if (e.fireT <= 0 && sy > -20 && sy < H + 20) {
-            state.enemyBullets.push({ wx: e.wx, wy: e.wy - 16, vy: -(130 + state.shownLevel * 4), r: 4 }); // ~40% slower, dodgeable
+            const volley = Math.max(1, e.volley || 1); // more bullets per volley as level grows
+            for (let v = 0; v < volley; v++) {
+              const spread = (volley > 1) ? (v - (volley - 1) / 2) * 0.16 : 0;
+              state.enemyBullets.push({
+                wx: e.wx + spread * 26,
+                wy: e.wy - 16,
+                vy: -(130 + state.shownLevel * 4), // ~40% slower, dodgeable
+                r: 4,
+              });
+            }
             e.fireT = e.fireRate;
           }
         }
