@@ -1162,8 +1162,8 @@ dropCd: 0,
             for (const ang of state.weapon.angles) {
               const cos = Math.cos(ang), sin = Math.sin(ang);
               state.playerBullets.push({
-                wx: noseX + sin * 200,
-                wy: noseWy + cos * 200,
+                wx: noseX + sin * 6,   // originate at the nose (small fan offset), NOT 200px off
+                wy: noseWy + cos * 6,
                 vx: Math.sin(ang) * CFG.bulletSpeed,
                 vy: Math.cos(ang) * CFG.bulletSpeed,
                 r: 3,
