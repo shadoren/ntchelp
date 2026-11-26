@@ -302,6 +302,7 @@
         <div class="stat"><span class="label">Score</span><span class="value" id="score">0</span></div>
         <div class="stat"><span class="label">Level</span><span class="value" id="level">1</span></div>
         <div class="stat"><span class="label">Lives</span><span class="value" id="lives">3</span></div>
+        <div class="stat"><span class="label">Weapon</span><span class="value" id="weapon">Blaster</span></div>
         <button class="btn-mute" id="muteBtn" type="button">Sound: on</button>
       </div>
     </header>
@@ -369,10 +370,34 @@
       maxScrollBonus: 220,
     };
 
+    // weapon tiers — auto-upgrade at level milestones
+    const WEAPONS = [
+      { minLevel: 1, name: "Blaster", kind: "bullet", interval: 1 / 6, angles: [0] },
+      { minLevel: 3, name: "Multi-Shot", kind: "bullet", interval: 1 / 6, angles: [-0.11, 0, 0.11] },
+      { minLevel: 5, name: "Rapid Multi", kind: "bullet", interval: 0.1, angles: [-0.11, 0, 0.11] },
+      { minLevel: 7, name: "Laser", kind: "laser", dps: 2.2, beams: [0] },
+      { minLevel: 9, name: "Triple Laser", kind: "laser", dps: 1.4, beams: [-0.384, 0, 0.384] },
+    ];
+
+    function weaponForLevel(N) {
+      let w = WEAPONS[0];
+      for (const c of WEAPONS) if (N >= c.minLevel) w = c;
+      return w;
+    }
+
+    function segDist(px, py, ax, ay, bx, by) {
+      const abx = bx - ax, aby = by - ay;
+      const len2 = abx * abx + aby * aby;
+      const t = len2 > 0 ? clamp(((px - ax) * abx + (py - ay) * aby) / len2, 0, 1) : 0;
+      const dx = px - (ax + abx * t), dy = py - (ay + aby * t);
+      return Math.hypot(dx, dy);
+    }
+
     const el = {
       score: document.getElementById("score"),
       level: document.getElementById("level"),
       lives: document.getElementById("lives"),
+      weapon: document.getElementById("weapon"),
       startCard: document.getElementById("startCard"),
       loseCard: document.getElementById("loseCard"),
       loseText: document.getElementById("loseText"),
@@ -402,6 +427,11 @@
       playerVY: 0,
       bank: 0,
       invuln: 0,
+      spawnGrace: 0,
+      weapon: WEAPONS[0],
+      weaponTier: 0,
+      upgradeFlash: "",
+      upgradeFlashT: 0,
       fireCd: 0,
       firing: false,
       pointerDown: false,
@@ -439,6 +469,8 @@
 
     let engineOsc = null;
     let engineGain = null;
+    let laserOsc = null;
+    let laserGain = null;
 
     function ensureAudio() {
       if (audio.ctx) {
@@ -536,6 +568,42 @@
       }
     }
 
+    function startLaser() {
+      const actx = ensureAudio();
+      if (!actx || laserOsc) return;
+      laserOsc = actx.createOscillator();
+      laserOsc.type = "sawtooth";
+      laserOsc.frequency.value = 110;
+      const lfo = actx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = 14;
+      const lfoGain = actx.createGain();
+      lfoGain.gain.value = 14;
+      lfo.connect(lfoGain);
+      lfoGain.connect(laserOsc.frequency);
+      const filter = actx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 700;
+      laserGain = actx.createGain();
+      laserGain.gain.value = 0.045;
+      laserOsc.connect(filter);
+      filter.connect(laserGain);
+      laserGain.connect(audio.master);
+      laserOsc.start();
+      lfo.start();
+      laserOsc._lfo = lfo;
+    }
+
+    function stopLaser() {
+      if (laserOsc) {
+        try { laserOsc.stop(); } catch (e) {}
+        if (laserOsc._lfo) { try { laserOsc._lfo.stop(); } catch (e) {} }
+        try { laserOsc.disconnect(); } catch (e) {}
+        laserOsc = null;
+        laserGain = null;
+      }
+    }
+
     function sfxShoot() {
       const now = performance.now();
       if (now - audio.lastShoot < 55) return;
@@ -557,6 +625,12 @@
     function sfxLevel() {
       playTone({ type: "sine", freq: 520, dur: 0.09, gain: 0.08, slide: 120 });
       playTone({ type: "sine", freq: 780, dur: 0.11, gain: 0.07, slide: 140, delay: 0.07 });
+    }
+
+    function sfxUpgrade() {
+      playTone({ type: "triangle", freq: 620, dur: 0.1, gain: 0.12, slide: 200 });
+      playTone({ type: "triangle", freq: 930, dur: 0.12, gain: 0.11, slide: 240, delay: 0.09 });
+      playTone({ type: "sine", freq: 1240, dur: 0.16, gain: 0.1, slide: 300, delay: 0.18 });
     }
 
     function toggleMute() {
@@ -582,6 +656,7 @@
       el.score.textContent = String(state.score);
       el.level.textContent = String(state.shownLevel);
       el.lives.textContent = String(state.lives);
+      el.weapon.textContent = state.weapon.name;
     }
 
     function saveBest() {
@@ -740,18 +815,18 @@
       const e = { type, wx, baseX: wx, wy, baseY: wy, age: rng() * Math.PI * 2, fireT: 1 + rng() * 1.6 };
       if (type === "scout") {
         e.hp = 1; e.r = 12; e.val = 100;
-        e.vy = -(70 + level * 5) * speedMul;
+        e.vy = -(48 + level * 2.5) * speedMul;
         e.amp = 0; e.freq = 0;
       } else if (type === "fighter") {
         e.hp = 2; e.r = 13; e.val = 150;
-        e.vy = -(45 + level * 3) * speedMul;
+        e.vy = -(30 + level * 1.8) * speedMul;
         e.amp = 30 + rng() * 34; e.freq = 1.8 + rng() * 1.6;
         e.phase = e.age;
       } else { // bomber
         e.hp = 5; e.r = 20; e.val = 300;
-        e.vy = -(12 + level * 1.2) * speedMul;
+        e.vy = -(9 + level * 0.8) * speedMul;
         e.amp = 0; e.freq = 0;
-        e.fireRate = Math.max(0.7, 2.6 - level * 0.07);
+        e.fireRate = Math.max(2, 4.2 - level * 0.03); // ~3.5-4.5s early, gentle ramp to floor 2s
       }
       return e;
     }
@@ -761,7 +836,7 @@
         type: "tank", wx, wy, baseY: wy, age: rng() * Math.PI * 2,
         fireT: 1 + rng() * 1.5,
         hp: 4, r: 14, val: 250, vy: 0,
-        fireRate: Math.max(0.9, 2.3 - level * 0.06),
+        fireRate: Math.max(2, 4.8 - level * 0.03), // ~4-5s early, gentle ramp to floor 2s
       };
     }
 
@@ -783,10 +858,10 @@
     function generateLevel(N) {
       const levelRng = mulberry32(0x9E3779B9 ^ (N * 2654435761));
       const base = (N - 1) * LEVEL_W; // world-y of level start (bottom of segment)
-      const speedMul = 1 + Math.min(N * 0.06, 2.0);
-      const numFormations = Math.min(3 + Math.floor(N * 0.7), 16);
-      const bomberChance = Math.min(0.1 + N * 0.02, 0.4);
-      const islandChance = Math.min(0.08 + N * 0.045, 0.6);
+      const speedMul = 1 + Math.min(N * 0.03, 1.2); // gentle ramp, caps at 1.2x
+      const numFormations = Math.min(2 + Math.floor(N * 0.4), 12); // lower early density
+      const bomberChance = Math.min(0.1 + N * 0.015, 0.3);
+      const islandChance = Math.min(0.08 + N * 0.04, 0.5);
 
       for (let i = 0; i < numFormations; i++) {
         const wx = 60 + levelRng() * (W - 120);
@@ -846,18 +921,25 @@
       state.bank = 0;
       state.fireCd = 0;
       state.firing = false;
+      state.weaponTier = 0;
+      state.weapon = weaponForLevel(1);
+      state.upgradeFlash = "";
+      state.upgradeFlashT = 0;
+      state.spawnGrace = 1.2;
       state.particles = [];
       state.shake = 0;
       resetWorld();
       state.mode = "playing";
       hideOverlays();
       startEngine();
+      stopLaser();
       updateHud();
     }
 
     function gameOver() {
       state.mode = "gameover";
       stopEngine();
+      stopLaser();
       state.shake = 14;
       saveBest();
       recordScore(state.score);
@@ -870,10 +952,21 @@
       show(el.loseCard);
     }
 
+    function damageEnemy(e, idx, amount) {
+      if (!e || e.hp == null) return;
+      e.hp -= amount;
+      if (e.hp <= 0) {
+        state.score += e.val;
+        spawnExplosion(e.wx, state.worldY - e.wy, e.type === "bomber" ? "#ff5c7a" : "#ffc857", e.type === "bomber" ? 22 : 14);
+        sfxExplosion();
+        state.enemies.splice(idx, 1);
+      }
+    }
+
     function hitPlayer() {
-      if (state.invuln > 0) return;
+      if (state.invuln > 0 || state.spawnGrace > 0) return;
       state.lives--;
-      state.invuln = 2.2;
+      state.invuln = 2.5;
       state.shake = 12;
       sfxHit();
       spawnExplosion(state.playerX, state.playerY, "#ff5c7a", 18);
@@ -959,12 +1052,23 @@
         state.genUpTo++;
       }
 
-      // level-clear bonus + HUD
+      // spawn grace after (re)start
+      if (state.spawnGrace > 0) state.spawnGrace -= dt;
+
+      // level-clear bonus + HUD + weapon progression
       const curLevel = Math.floor(state.worldY / LEVEL_W) + 1;
       if (curLevel > state.shownLevel) {
         state.shownLevel = curLevel;
         state.score += 40 + curLevel * 6;
         sfxLevel();
+        const newWeapon = weaponForLevel(curLevel);
+        if (newWeapon !== state.weapon) {
+          state.weapon = newWeapon;
+          state.upgradeFlash = newWeapon.name.toUpperCase() + "!";
+          state.upgradeFlashT = 1.2;
+          sfxUpgrade();
+          if (newWeapon.kind === "laser") startLaser();
+        }
       }
 
       // player movement
@@ -998,22 +1102,54 @@
 
       // invulnerability
       if (state.invuln > 0) state.invuln -= dt;
+      if (state.upgradeFlashT > 0) state.upgradeFlashT -= dt;
 
-      // firing (bullets fly up = +world-y)
-      if (state.firing) {
-        state.fireCd -= dt;
-        if (state.fireCd <= 0) {
-          state.playerBullets.push({ wx: state.playerX, wy: state.worldY - state.playerY + 16, vy: CFG.bulletSpeed, r: 3 });
-          state.fireCd = CFG.fireInterval;
-          sfxShoot();
+      // firing — bullet tiers spawn bullets; laser tiers are handled below as continuous beams
+      if (state.weapon.kind === "bullet") {
+        if (state.firing) {
+          state.fireCd -= dt;
+          if (state.fireCd <= 0) {
+            const noseX = state.playerX, noseWy = state.worldY - state.playerY + 16;
+            for (const ang of state.weapon.angles) {
+              const cos = Math.cos(ang), sin = Math.sin(ang);
+              state.playerBullets.push({
+                wx: noseX + sin * 200,
+                wy: noseWy + cos * 200,
+                vx: Math.sin(ang) * CFG.bulletSpeed,
+                vy: Math.cos(ang) * CFG.bulletSpeed,
+                r: 3,
+              });
+            }
+            state.fireCd = state.weapon.interval;
+            sfxShoot();
+          }
+        } else {
+          state.fireCd = Math.min(state.fireCd, 0.05);
         }
-      } else {
-        state.fireCd = Math.min(state.fireCd, 0.05);
       }
 
-      // player bullets (up)
+      // laser tiers — continuous beam(s) from the nose straight up the screen, DPS-based
+      if (state.weapon.kind === "laser") {
+        const noseX = state.playerX, noseWy = state.worldY - state.playerY + 16;
+        const screenTopWy = state.worldY + H + 20;
+        const len = screenTopWy - noseWy;
+        for (const beam of state.weapon.beams) {
+          const dirX = Math.sin(beam), dirY = Math.cos(beam);
+          const ax = noseX + dirX * 0, ay = noseWy + dirY * 0;
+          const bx = noseX + dirX * len, by = noseWy + dirY * len;
+          for (let ei = state.enemies.length - 1; ei >= 0; ei--) {
+            const e = state.enemies[ei];
+            if (segDist(e.wx, e.wy, ax, ay, bx, by) <= e.r + 4) {
+              damageEnemy(e, ei, state.weapon.dps * dt);
+            }
+          }
+        }
+      }
+
+      // player bullets (up; angled tiers drift sideways)
       for (let bi = state.playerBullets.length - 1; bi >= 0; bi--) {
         const b = state.playerBullets[bi];
+        b.wx += (b.vx || 0) * dt;
         b.wy += b.vy * dt;
         if (b.wy - state.worldY > H + 40) { state.playerBullets.splice(bi, 1); continue; }
         let hit = false;
@@ -1023,13 +1159,7 @@
           const rr = e.r + b.r;
           if (dx * dx + dy * dy < rr * rr) {
             hit = true;
-            e.hp--;
-            if (e.hp <= 0) {
-              state.score += e.val;
-              spawnExplosion(e.wx, state.worldY - e.wy, e.type === "bomber" ? "#ff5c7a" : "#ffc857", e.type === "bomber" ? 22 : 14);
-              sfxExplosion();
-              state.enemies.splice(ei, 1);
-            }
+            damageEnemy(e, ei, 1);
             break;
           }
         }
@@ -1048,7 +1178,7 @@
           e.fireT -= dt;
           const sy = state.worldY - e.wy;
           if (e.fireT <= 0 && sy > -20 && sy < H + 20) {
-            state.enemyBullets.push({ wx: e.wx, wy: e.wy - 16, vy: -(220 + state.shownLevel * 6), r: 4 });
+            state.enemyBullets.push({ wx: e.wx, wy: e.wy - 16, vy: -(130 + state.shownLevel * 4), r: 4 }); // ~40% slower, dodgeable
             e.fireT = e.fireRate;
           }
         }
@@ -1068,8 +1198,8 @@
         if (state.worldY - b.wy > H + 40) state.enemyBullets.splice(bi, 1);
       }
 
-      // collisions vs player
-      if (state.invuln <= 0) {
+      // collisions vs player (skipped during invuln + spawn grace)
+      if (state.invuln <= 0 && state.spawnGrace <= 0) {
         const px = state.playerX;
         const pwy = state.worldY - state.playerY;
         let dead = false;
@@ -1310,6 +1440,50 @@
       ctx.shadowBlur = 0;
     }
 
+    function drawBeams() {
+      if (state.mode !== "playing" || state.weapon.kind !== "laser") return;
+      const noseX = state.playerX, noseSy = state.playerY - 24;
+      const screenTopWy = state.worldY + H + 20;
+      const len = screenTopWy - (state.worldY - state.playerY + 16);
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.shadowColor = "#4de1c1";
+      ctx.shadowBlur = 18;
+      for (const beam of state.weapon.beams) {
+        const dirX = Math.sin(beam), dirY = -Math.cos(beam);
+        ctx.strokeStyle = "rgba(77,225,193,0.9)";
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.moveTo(noseX, noseSy);
+        ctx.lineTo(noseX + dirX * len, noseSy + dirY * len);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(232,255,250,0.85)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(noseX, noseSy);
+        ctx.lineTo(noseX + dirX * len, noseSy + dirY * len);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawUpgradeFlash() {
+      if (state.upgradeFlashT <= 0 || !state.upgradeFlash) return;
+      const a = Math.min(1, state.upgradeFlashT / 0.4);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = "#4de1c1";
+      ctx.font = "bold 20px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.shadowColor = "#4de1c1";
+      ctx.shadowBlur = 14;
+      ctx.fillText(state.upgradeFlash, state.playerX, state.playerY - 46);
+      ctx.restore();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
     function drawPlayer() {
       const blink = state.invuln > 0 && Math.floor(state.invuln * 12) % 2 === 0;
       if (blink) return;
@@ -1405,7 +1579,9 @@
       drawIslands();
       drawEnemies();
       drawBullets();
+      drawBeams();
       if (state.mode !== "gameover") drawPlayer();
+      drawUpgradeFlash();
       drawParticles();
 
       const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.78);
