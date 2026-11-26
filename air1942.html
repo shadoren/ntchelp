@@ -877,7 +877,7 @@
 
       for (let i = 0; i < numFormations; i++) {
         const wx = 60 + levelRng() * (W - 120);
-        const wy = base + levelRng() * LEVEL_W;
+        const wy = base + H + levelRng() * LEVEL_W; // place ABOVE the top of view so it descends in from the top (never pops mid/bottom screen)
         const r = levelRng();
         if (r < bomberChance) {
           state.enemies.push(makeEnemy("bomber", wx, wy, N, speedMul, levelRng));
@@ -1151,17 +1151,19 @@
       }
 
       // laser tiers — continuous beam(s) from the nose straight up the screen, DPS-based
+      // Screen-space column test: the beam occupies the column above the nose (angled beams drift).
+      // Any enemy in that column (within e.r + 6 of the beam x) takes dps*dt every frame -> continuous damage.
       if (state.weapon.kind === "laser") {
-        const noseX = state.playerX, noseWy = state.worldY - state.playerY + 16;
-        const screenTopWy = state.worldY + H + 20;
-        const len = screenTopWy - noseWy;
+        const noseScreenY = state.playerY - 16; // beam origin just above the plane nose
         for (const beam of state.weapon.beams) {
-          const dirX = Math.sin(beam), dirY = Math.cos(beam);
-          const ax = noseX + dirX * 0, ay = noseWy + dirY * 0;
-          const bx = noseX + dirX * len, by = noseWy + dirY * len;
+          const dirX = Math.sin(beam); // 0 = straight up; +/-0.384 = angled
           for (let ei = state.enemies.length - 1; ei >= 0; ei--) {
             const e = state.enemies[ei];
-            if (segDist(e.wx, e.wy, ax, ay, bx, by) <= e.r + 4) {
+            const sy = state.worldY - e.wy;      // enemy screen y (smaller = higher on screen)
+            if (sy > noseScreenY) continue;     // below the nose -> behind the beam, skip
+            const distUp = noseScreenY - sy;    // how far above the nose the enemy is
+            const beamX = state.playerX + dirX * distUp;
+            if (Math.abs(e.wx - beamX) <= e.r + 6) {
               damageEnemy(e, ei, state.weapon.dps * dt);
             }
           }
